@@ -13,6 +13,11 @@ let r = validateSignup(fd(good), invite);
 assert.ok(r.ok, JSON.stringify(r.errors));
 assert.equal(r.values.forms_email, "a@b.co", "forms email falls back to accounts email");
 assert.equal(r.values.promo_consent, 0, "promo only when ticked");
+assert.equal(r.values.catering_email, "a@b.co", "catering falls back to the feedback email");
+r = validateSignup(fd({ ...good, forms_email: "f@b.co", catering_email: "c@b.co" }), invite);
+assert.equal(r.values.catering_email, "c@b.co", "separate catering email kept");
+r = validateSignup(fd({ ...good, forms_email: "f@b.co", catering_email: "c@b.co", catering_same: "yes" }), invite);
+assert.equal(r.values.catering_email, "f@b.co", "same-as-feedback wins");
 assert.equal(validateSignup(fd({ ...good, promo: "yes" }), invite).values.promo_consent, 1);
 assert.equal(r.values.approved_emails, "a@b.co, c@d.co", "approved emails are lower-cased and de-duplicated");
 

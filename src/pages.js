@@ -128,11 +128,16 @@ export function joinPage({ invite, terms, version, sitekey, values = {}, errors 
       if (!val) return "";
       return `<div class="${f.name === "business_name" ? "wide" : ""}"><span class="l" style="display:block;font-size:14px;font-weight:500;color:var(--navy);margin-bottom:4px">${esc(f.label)}</span><div class="locked"><div class="v">${esc((f.prefix || "") + val)}</div><div class="l2">Set by tap by techsorted</div></div></div>`;
     }
+    const same = values.catering_same === 0 ? "" : "checked";
+    const sameBox =
+      f.name === "catering_email"
+        ? `<label class="check wide" style="margin:0"><input type="checkbox" name="catering_same" value="yes" id="catering_same" ${same}> <span>Catering form goes to the same email as feedback</span></label>`
+        : "";
     const wide = f.name === "business_address" ? "wide" : "";
     const e = errors[f.name];
     const fromInvite = { accounts_email: invite.contact_email, contact_person: invite.contact_name, approved_email_1: invite.contact_email }[f.name];
     const pre = f.name in values ? v(f.name) : fromInvite || "";
-    return `<div class="${wide} ${e ? "bad" : ""}">
+    return `${sameBox}<div class="${wide} ${e ? "bad" : ""}" ${f.name === "catering_email" ? `id="catwrap" ${same ? "hidden" : ""}` : ""}>
 <label class="l" for="${f.name}">${esc(f.label)}${f.required ? "" : ' <span class="opt">(optional)</span>'}</label>
 <input id="${f.name}" name="${f.name}" type="${f.type || "text"}" value="${esc(pre)}" maxlength="${f.max}" ${f.required ? "required" : ""} autocomplete="${auto(f.name)}">
 ${e ? `<div class="err">${esc(e)}</div>` : f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ""}
@@ -177,6 +182,8 @@ ${message ? `<div class="alert e" role="alert">${esc(message)}</div>` : ""}
 </form>`;
 
   const script = `
+var cs=document.getElementById('catering_same'),cw=document.getElementById('catwrap');
+if(cs&&cw)cs.addEventListener('change',function(){cw.hidden=cs.checked;if(!cs.checked)document.getElementById('catering_email').focus()});
 var n=document.getElementById('signed_name'),p=document.getElementById('sigprev');
 n.addEventListener('input',function(){p.textContent=n.value});
 document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('go');b.disabled=true;b.textContent='Signing…';document.getElementById('busy').hidden=false});
@@ -264,7 +271,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
 <div class="card">
   <div class="step"><span>${agreements.length}</span><h2>Signed</h2></div>
   ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
-  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Specials & updates approved: ${esc(a.approved_emails)}</div><div class="mini">Forms emailed to: ${esc(a.forms_email)}</div><form method="post" action="/agreements/signed/${esc(a.id)}/promo" class="row" style="gap:6px;margin-top:4px">${a.promo_consent ? '<span class="pill ok">Promo photos OK</span>' : '<span class="pill no">No promo photos</span>'}<button class="smallbtn" type="submit" style="height:24px;font-size:12px">${a.promo_consent ? "Mark opted out" : "Mark OK"}</button></form>` : ""}</td>
+  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Specials & updates approved: ${esc(a.approved_emails)}</div><div class="mini">Feedback form → ${esc(a.forms_email)} · Catering form → ${esc(a.catering_email || a.forms_email)}</div><form method="post" action="/agreements/signed/${esc(a.id)}/promo" class="row" style="gap:6px;margin-top:4px">${a.promo_consent ? '<span class="pill ok">Promo photos OK</span>' : '<span class="pill no">No promo photos</span>'}<button class="smallbtn" type="submit" style="height:24px;font-size:12px">${a.promo_consent ? "Mark opted out" : "Mark OK"}</button></form>` : ""}</td>
   <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
   <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>
   <tr id="${esc(a.id)}"><td colspan="3" style="background:var(--tint);border-radius:0 0 10px 10px">${billingBox(a, plan(a), defaultPrice)}</td></tr>`).join("")}

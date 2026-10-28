@@ -11,7 +11,8 @@ export const CUSTOMER_FIELDS = [
   { name: "phone", label: "Phone", required: true, max: 30, type: "tel", pattern: /^[0-9+()\s-]{6,30}$/ },
   { name: "accounts_email", label: "Accounts Email", required: true, max: 120, type: "email", email: true, hint: "Invoices and your signed copy go here" },
   { name: "business_address", label: "Business Address", required: true, max: 200 },
-  { name: "forms_email", label: "Feedback & Catering Forms Emailed To", max: 120, type: "email", email: true, hint: "Your page's Feedback and Catering forms send to this address. Leave blank to use your accounts email" },
+  { name: "forms_email", label: "Feedback Form Emailed To", max: 120, type: "email", email: true, hint: "Your page's Feedback form sends here. Leave blank to use your accounts email" },
+  { name: "catering_email", label: "Catering Form Emailed To", max: 120, type: "email", email: true, hint: "Your page's Catering form sends here" },
   { name: "approved_email_1", label: "Specials & Updates Approved Email", required: true, max: 120, type: "email", email: true, group: "approved",
     hint: "Only approved addresses can send us specials, menu and page changes" },
   { name: "approved_email_2", label: "Second Approved Email", max: 120, type: "email", email: true, group: "approved" },
@@ -42,6 +43,11 @@ export function validateSignup(form, invite) {
     values[f.name] = v;
   }
   if (!values.forms_email) values.forms_email = values.accounts_email;
+  values.catering_same = form.get("catering_same") === "yes" ? 1 : 0;
+  if (values.catering_same || !values.catering_email) {
+    values.catering_email = values.forms_email;
+    delete errors.catering_email;
+  }
   values.approved_emails = [...new Set(["approved_email_1", "approved_email_2", "approved_email_3"].map((k) => values[k].toLowerCase()).filter(Boolean))].join(", ");
   values.page_slug = clean(invite.page_slug); // internal only: set by Shaun on the link, not shown to the customer
 

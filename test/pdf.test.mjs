@@ -16,7 +16,7 @@ const bytes = await stampAgreement({
   fields: {
     business_name: "Coffee Nation", promo_consent: "Yes, happy for our signs to be featured", contact_person: "Paul Example",
     contact_role: "Owner", phone: "021 123 4567", accounts_email: "accounts@coffeenation.example",
-    business_address: "123 Example Street, Hamilton Central, Hamilton 3204", forms_email: "hello@coffeenation.example",
+    business_address: "123 Example Street, Hamilton Central, Hamilton 3204", forms_email: "hello@coffeenation.example", catering_email: "events@coffeenation.example",
     quote_number: "QU-0042", approved_emails: "paul@coffeenation.example, specials@coffeenation.example", sign_count: "6",
     customer_signatory: "Paul Example", customer_date: "28 October 2026",
     techsorted_signatory: "Shaun", techsorted_date: "28 October 2026",

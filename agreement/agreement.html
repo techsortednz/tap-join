@@ -33,10 +33,10 @@ h2{font-size:8.2pt;font-weight:700;color:var(--blue);text-transform:uppercase;le
 /* Customer details */
 .cust{background:var(--tint);border-radius:2mm;padding:2.6mm 3mm 1.4mm}
 .grid{display:flex;flex-wrap:wrap;column-gap:4mm}
-.f{width:calc(50% - 2mm);display:flex;align-items:flex-end;gap:2mm;margin-bottom:.5mm}
+.f{width:calc(50% - 2mm);display:flex;align-items:flex-end;gap:2mm;margin-bottom:.2mm}
 .f.full{width:100%}
 .f label{flex:none;width:27mm;font-size:7.6pt;color:var(--muted)}
-.f input{flex:1;height:4.5mm;border:0;border-bottom:.6pt solid #9aa1b2;background:transparent;font:inherit;font-size:8.5pt;color:var(--ink)}
+.f input{flex:1;height:4.3mm;border:0;border-bottom:.6pt solid #9aa1b2;background:transparent;font:inherit;font-size:8.5pt;color:var(--ink)}
 .f .pre{font-size:8.3pt;color:var(--navy);white-space:nowrap}
 
 /* Body columns */
@@ -99,7 +99,8 @@ ol li::before{counter-increment:t;content:counter(t);background:none;width:auto;
     <div class="f"><label>Accounts Email</label><input name="accounts_email"></div>
     <div class="f"><label>Business Address</label><input name="business_address"></div>
     <div class="f"><label>Number of Signs</label><input name="sign_count"></div>
-    <div class="f full long"><label>Feedback &amp; Catering Forms Emailed To</label><input name="forms_email"></div>
+    <div class="f full long"><label>Feedback Form Emailed To</label><input name="forms_email"></div>
+    <div class="f full long"><label>Catering Form Emailed To</label><input name="catering_email"></div>
     <div class="f full long"><label>Specials &amp; Updates Approved Emails</label><input name="approved_emails"></div>
     <div class="f full long"><label>Promotional Photos</label><input name="promo_consent"></div>
   </div>
