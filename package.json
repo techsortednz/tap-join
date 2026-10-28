@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --host localhost",
     "test": "node test/pdf.test.mjs && node test/validate.test.mjs",
     "db:local": "wrangler d1 migrations apply tap-join --local"
   },

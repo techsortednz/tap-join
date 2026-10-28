@@ -16,7 +16,9 @@ export async function verifyAccessJwt(request, env) {
 
     const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     const now = Date.now() / 1000;
-    if (!aud.includes(env.ACCESS_AUD)) return false;
+    // ACCESS_AUD may list several Access apps, comma-separated (e.g. the workers.dev app and the hub app).
+    const allowed = String(env.ACCESS_AUD).split(",").map((s) => s.trim()).filter(Boolean);
+    if (!aud.some((a) => allowed.includes(a))) return false;
     if (payload.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) return false;
     if (typeof payload.exp !== "number" || payload.exp < now) return false;
     if (typeof payload.nbf === "number" && payload.nbf > now + 60) return false;

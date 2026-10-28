@@ -8,6 +8,13 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 preview_urls = false
 
+# jointap.techsorted.nz: customer sign-up pages. hub.techsorted.nz: Shaun's private hub
+# (everything except /stats*, which goes to the tap-stats Worker).
+routes = [
+  { pattern = "jointap.techsorted.nz", custom_domain = true },
+  { pattern = "hub.techsorted.nz/*", zone_name = "techsorted.nz" },
+]
+
 # Logs in the dashboard (Workers > tap-join > Logs): email results, errors, timings.
 [observability]
 enabled = true
@@ -37,12 +44,13 @@ fallthrough = true
 # are set in the Worker's settings in the Cloudflare dashboard, never in this file.
 [vars]
 PUBLIC_ORIGIN = "https://jointap.techsorted.nz"
+HUB_HOST = "hub.techsorted.nz"
 TURNSTILE_SITEKEY = "0x4AAAAAAFltpbJR-I-H1Lwk"   # shared "Tap Contact Form Human Check" widget
 MAIL_FROM = "Shaun at tap by techsorted <shaun@techsorted.nz>"
 REPLY_TO = "shaun@techsorted.nz"
 NOTIFY_EMAIL = "shaun@techsorted.nz"
 COUNTERSIGN_NAME = "Shaun"
 INVITE_DAYS = "14"
-# Cloudflare Access for /admin (the "tap-join admin" Access app). If either is empty, /admin is closed.
+# Cloudflare Access for hub.techsorted.nz (the "techsorted hub" Access app). If either is empty, the hub is closed.
 ACCESS_TEAM_DOMAIN = "techsortednz.cloudflareaccess.com"
-ACCESS_AUD = "67789877b5785e9f15f8b99d0f998ae11b0b2efa0f3afe0d07bbe73326c27f32"
+ACCESS_AUD = "c8c55d7ab43fb0a380186aea39805d63733abb3eabe9ab929032bea3c01e14e1"  # techsorted hub app

@@ -108,7 +108,7 @@ ${turnstile ? '<script src="https://challenges.cloudflare.com/turnstile/v0/api.j
 <style>${CSS}</style>
 </head>
 <body>
-<header class="top"><div class="wrap">${BRAND}${admin ? "<small>Agreements admin</small>" : ""}</div></header>
+<header class="top"><div class="wrap">${BRAND}${admin ? `<small><a href="/" style="color:inherit;text-decoration:none">← Hub</a></small>` : ""}</div></header>
 <main><div class="wrap">
 ${body}
 </div></main>
@@ -228,11 +228,12 @@ export function adminPage({ invites, agreements, origin, flash = null, errors = 
 
   const body = `
 <h1>Agreements</h1>
+<p class="lead">Sign-up links for new Tap Sign customers, and their signed agreements.</p>
 ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.link ? `<div class="linkbox"><input type="text" readonly value="${esc(flash.link)}" id="newlink"><button type="button" data-copy="newlink">Copy</button></div>` : ""}${flash.note ? `<div style="margin-top:6px">${esc(flash.note)}</div>` : ""}</div>` : ""}
 
 <div class="card">
   <div class="step"><span>+</span><h2>New sign-up link</h2></div>
-  <form method="post" action="/admin/invites">
+  <form method="post" action="/agreements/invites">
     <div class="fields">
       ${inp("business_name", "Business name", 'required maxlength="120"', true)}
       ${inp("contact_name", "Contact name <span class=\"opt\">(optional)</span>", 'maxlength="80" placeholder="Paul Smith"')}
@@ -253,7 +254,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   ${pending.map((i) => `<tr><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
   <td><input type="text" readonly value="${esc(link(i.code))}" id="l-${esc(i.code)}" style="height:32px;font-size:12px;min-width:12rem"><button type="button" class="smallbtn" data-copy="l-${esc(i.code)}">Copy</button></td>
   <td>${state(i)}</td>
-  <td>${i.revoked_at ? "" : `<form method="post" action="/admin/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
+  <td>${i.revoked_at ? "" : `<form method="post" action="/agreements/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
   </table></div>` : '<p class="mini">Nothing waiting.</p>'}
 </div>
 
@@ -262,7 +263,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
   ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div></td>
   <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
-  <td><a href="/admin/agreements/${esc(a.id)}.pdf">PDF</a><form method="post" action="/admin/agreements/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>`).join("")}
+  <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>`).join("")}
   </table></div>` : '<p class="mini">No signed agreements yet.</p>'}
 </div>`;
 
@@ -281,5 +282,30 @@ function auto(name) {
       legal_entity: "organization",
       contact_role: "organization-title",
     }[name] || "off"
+  );
+}
+
+// ------------------------------------------------------------------ hub home
+
+export function hubPage({ waiting, signed, latest }) {
+  const card = (href, title, text, extra = "") =>
+    `<a class="card hubcard" href="${href}"><h2>${title}</h2><p>${text}</p>${extra}<span class="go2">Open →</span></a>`;
+  const body = `
+<h1>techsorted hub</h1>
+<p class="lead">Your private Tap tools, behind one login.</p>
+<div class="hubgrid">
+${card("/stats/", "Stats", "Page views, Google reviews and form enquiries for every cafe.")}
+${card("/agreements", "Agreements", "Make sign-up links and see signed agreements.",
+  `<p class="mini">${esc(String(waiting))} waiting · ${esc(String(signed))} signed${latest ? ` · latest ${esc(latest)}` : ""}</p>`)}
+</div>
+<p class="mini" style="margin-top:20px">Customer sign-up pages live at jointap.techsorted.nz.</p>`;
+  return layout({ title: "techsorted hub", body, admin: false }).replace(
+    "</style>",
+    `.hubgrid{display:grid;gap:14px;margin-top:8px}@media(min-width:640px){.hubgrid{grid-template-columns:1fr 1fr}}
+.hubcard{display:block;text-decoration:none;color:inherit;transition:border-color .15s}
+.hubcard:hover{border-color:var(--blue)}
+.hubcard h2{font-size:20px;color:var(--navy);margin-bottom:6px}
+.hubcard p{color:var(--muted);font-size:15px;margin-bottom:6px}
+.go2{display:inline-block;margin-top:8px;font-weight:600;color:var(--blue)}</style>`
   );
 }

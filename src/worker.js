@@ -6,12 +6,14 @@
 //   GET  /j/<code>/agreement.pdf   the signed copy (for 30 days after signing)
 //   GET  /agreement.pdf            the current blank agreement, to read or print
 //
-// Admin (Cloudflare Access login):
-//   GET  /admin                    make sign-up links, see who's signed, download PDFs
-//   POST /admin/invites            make a link (optionally email it to the customer)
-//   POST /admin/invites/<code>/revoke
-//   POST /admin/agreements/<id>/resend   email the signed copy again
-//   GET  /admin/agreements/<id>.pdf
+// Hub (hub.techsorted.nz, Cloudflare Access login; /stats there is the tap-stats Worker):
+//   GET  /                         hub home: links to Stats and Agreements
+//   GET  /agreements               make sign-up links, see who's signed, download PDFs
+//   POST /agreements/invites       make a link (optionally email it to the customer)
+//   POST /agreements/invites/<code>/revoke
+//   GET  /agreements/signed/<id>.pdf
+//   POST /agreements/signed/<id>/resend   email the signed copy again
+// jointap.techsorted.nz/admin redirects to the hub.
 //
 // Storage: D1 (binding DB) for invites and agreement records, R2 (binding AGREEMENTS) for the signed PDFs.
 // Secrets: TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID. Everything else is in wrangler.toml.
@@ -27,7 +29,7 @@ import { verifyAccessJwt } from "./access.js";
 import { stampAgreement } from "./pdf.js";
 import { sendEmail, sendTelegram, verifyTurnstile } from "./notify.js";
 import { validateSignup, validateInvite } from "./validate.js";
-import { joinPage, signedPage, statusPage, adminPage } from "./pages.js";
+import { joinPage, signedPage, statusPage, adminPage, hubPage } from "./pages.js";
 import { inviteEmail, signedEmail } from "./emails.js";
 
 const TZ = "Pacific/Auckland";
@@ -52,11 +54,28 @@ async function route(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   const method = request.method;
+  const local = isLocalDev(env, url);
+  const onHub = url.hostname === env.HUB_HOST;
 
   if (method === "POST" && !sameOrigin(request, url)) return text("Forbidden", 403);
 
+  // Shaun's private hub (hub.techsorted.nz): home page and /agreements. /stats is routed to tap-stats.
+  if (onHub || (local && (path === "/hub" || path === "/agreements" || path.startsWith("/agreements/")))) {
+    if (!(await isAdmin(request, env, url))) return text("Sign in with Cloudflare Access to open the hub.", 401);
+    let m;
+    if ((path === "/" || path === "/hub") && method === "GET") return showHub(env);
+    if (path === "/agreements" && method === "GET") return showAdmin(env, url);
+    if (path === "/agreements/invites" && method === "POST") return createInvite(request, env, url);
+    if ((m = path.match(/^\/agreements\/invites\/([^/]+)\/revoke$/)) && method === "POST") return revokeInvite(env, m[1]);
+    if ((m = path.match(/^\/agreements\/signed\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
+    if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
+    return text("Not found", 404);
+  }
+
+  // Public customer pages (jointap.techsorted.nz).
   if (path === "/") return Response.redirect("https://techsorted.nz/tap/", 302);
   if (path === "/agreement.pdf" && method === "GET") return pdf(blank, `Tap-Sign-Service-Agreement-v${meta.version}.pdf`, "inline");
+  if (path === "/admin" || path.startsWith("/admin/")) return Response.redirect(`https://${env.HUB_HOST}/agreements`, 302);
 
   let m;
   if ((m = path.match(/^\/j\/([^/]+)$/))) {
@@ -65,18 +84,20 @@ async function route(request, env, ctx) {
   }
   if ((m = path.match(/^\/j\/([^/]+)\/agreement\.pdf$/)) && method === "GET") return customerDownload(env, m[1]);
 
-  if (path === "/admin" || path.startsWith("/admin/")) {
-    if (!(await isAdmin(request, env, url))) {
-      return text("Sign in with Cloudflare Access to open the admin page.", 401);
-    }
-    if (path === "/admin" && method === "GET") return showAdmin(env, url);
-    if (path === "/admin/invites" && method === "POST") return createInvite(request, env, url);
-    if ((m = path.match(/^\/admin\/invites\/([^/]+)\/revoke$/)) && method === "POST") return revokeInvite(env, m[1]);
-    if ((m = path.match(/^\/admin\/agreements\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
-    if ((m = path.match(/^\/admin\/agreements\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
-  }
-
   return text("Not found", 404);
+}
+
+async function showHub(env) {
+  const r = await env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM invites WHERE signed_at IS NULL AND revoked_at IS NULL AND expires_at > ?) AS waiting,
+       (SELECT COUNT(*) FROM agreements) AS signed,
+       (SELECT business_name || '|' || signed_at FROM agreements ORDER BY signed_at DESC LIMIT 1) AS latest`
+  )
+    .bind(new Date().toISOString())
+    .first();
+  const [latestName, latestAt] = (r.latest || "").split("|");
+  return html(hubPage({ waiting: r.waiting, signed: r.signed, latest: latestName ? `${latestName}, ${nzDate(new Date(latestAt))}` : "" }));
 }
 
 // ------------------------------------------------------------------ customer
@@ -241,7 +262,7 @@ function telegramText(env, a, emailed) {
       .join(" · "),
     emailed ? "Signed copy emailed to them and you." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
     "Next: send the setup and signs invoice.",
-    `${env.PUBLIC_ORIGIN}/admin`,
+    `https://${env.HUB_HOST}/agreements`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -315,7 +336,7 @@ async function createInvite(request, env, url) {
     const res = await sendEmail(env, { to: [v.contact_email], ...inviteEmail({ v, link, expires: nzDate(expires) }) });
     emailed = res.ok ? "1" : "0";
   }
-  return redirect(`/admin?made=${code}${emailed ? `&emailed=${emailed}` : ""}`);
+  return redirect(`/agreements?made=${code}${emailed ? `&emailed=${emailed}` : ""}`);
 }
 
 async function revokeInvite(env, code) {
@@ -324,7 +345,7 @@ async function revokeInvite(env, code) {
       .bind(new Date().toISOString(), code)
       .run();
   }
-  return redirect("/admin?revoked=1");
+  return redirect("/agreements?revoked=1");
 }
 
 async function resendCopy(env, id) {
@@ -333,7 +354,7 @@ async function resendCopy(env, id) {
   if (!a) return text("Not found", 404);
   const invite = await env.DB.prepare("SELECT * FROM invites WHERE code = ?").bind(a.invite_code).first();
   const mail = await deliverCopy(env, a, invite, null);
-  return redirect(`/admin?resent=${mail.ok ? "1" : "0"}`);
+  return redirect(`/agreements?resent=${mail.ok ? "1" : "0"}`);
 }
 
 async function adminDownload(env, id) {
