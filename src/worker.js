@@ -67,6 +67,7 @@ async function route(request, env, ctx) {
     if (path === "/agreements" && method === "GET") return showAdmin(env, url);
     if (path === "/agreements/invites" && method === "POST") return createInvite(request, env, url);
     if ((m = path.match(/^\/agreements\/invites\/([^/]+)\/revoke$/)) && method === "POST") return revokeInvite(env, m[1]);
+    if ((m = path.match(/^\/agreements\/invites\/([^/]+)\/email$/)) && method === "POST") return resendInvite(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
     return text("Not found", 404);
@@ -297,12 +298,14 @@ async function showAdmin(env, url, extra = {}) {
   ]);
   const flash = url.searchParams.get("made")
     ? {
-        title: url.searchParams.get("emailed") === "1" ? "Link made and emailed to the customer." : "Link made. Copy it and send it to the customer.",
+        title: url.searchParams.get("emailed") === "1" ? "Link made and emailed to the customer." : "Link made. Copy it and send it to the customer, or add their email and use Send link.",
         link: `${env.PUBLIC_ORIGIN}/j/${url.searchParams.get("made")}`,
         note: url.searchParams.get("emailed") === "0" ? "The email didn't send, so send the link yourself." : "",
       }
     : url.searchParams.get("revoked")
       ? { title: "Link cancelled." }
+      : url.searchParams.get("linksent")
+        ? { title: url.searchParams.get("linksent") === "1" ? "Link emailed to the customer." : "The link email didn't send. Copy the link and send it yourself." }
       : url.searchParams.get("resent")
         ? { title: url.searchParams.get("resent") === "1" ? "Signed copy emailed again." : "The email still didn't send. Download the PDF and send it yourself." }
         : null;
@@ -329,13 +332,27 @@ async function createInvite(request, env, url) {
     .bind(code, now.toISOString(), expires.toISOString(), v.business_name, v.contact_name, v.contact_email, v.page_slug, v.quote_number, v.sign_count, v.note)
     .run();
 
+  // Always email the link when there's a customer email; otherwise Shaun copies it from the page.
   let emailed = "";
-  if (form.get("send_email") === "yes" && v.contact_email) {
-    const link = `${env.PUBLIC_ORIGIN}/j/${code}`;
-    const res = await sendEmail(env, { to: [v.contact_email], ...inviteEmail({ v, link, expires: nzDate(expires) }) });
-    emailed = res.ok ? "1" : "0";
-  }
+  if (v.contact_email) emailed = (await emailInvite(env, { code, ...v, expires_at: expires.toISOString() })) ? "1" : "0";
   return redirect(`/agreements?made=${code}${emailed ? `&emailed=${emailed}` : ""}`);
+}
+
+async function emailInvite(env, inv) {
+  const res = await sendEmail(env, {
+    to: [inv.contact_email],
+    ...inviteEmail({ v: inv, link: `${env.PUBLIC_ORIGIN}/j/${inv.code}`, expires: nzDate(new Date(inv.expires_at)) }),
+  });
+  if (res.ok) await env.DB.prepare("UPDATE invites SET emailed_at = ? WHERE code = ?").bind(new Date().toISOString(), inv.code).run();
+  return res.ok;
+}
+
+async function resendInvite(env, code) {
+  const inv = CODE_RE.test(code) ? await loadInvite(env, code) : null;
+  if (!inv || inv.signed_at || inv.revoked_at || inv.expires_at < new Date().toISOString() || !inv.contact_email) {
+    return redirect("/agreements?linksent=0");
+  }
+  return redirect(`/agreements?linksent=${(await emailInvite(env, inv)) ? "1" : "0"}`);
 }
 
 async function revokeInvite(env, code) {

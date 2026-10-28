@@ -237,13 +237,13 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
     <div class="fields">
       ${inp("business_name", "Business name", 'required maxlength="120"', true)}
       ${inp("contact_name", "Contact name <span class=\"opt\">(optional)</span>", 'maxlength="80" placeholder="Paul Smith"')}
-      ${inp("contact_email", "Customer email <span class=\"opt\">(optional)</span>", 'maxlength="120" inputmode="email"')}
+      ${inp("contact_email", "Customer email <span class=\"opt\">(link is emailed here)</span>", 'maxlength="120" inputmode="email"')}
       ${inp("page_slug", "Page slug <span class=\"opt\">(optional)</span>", 'maxlength="30" placeholder="coffeenation"')}
       ${inp("quote_number", "Xero quote no. <span class=\"opt\">(optional)</span>", 'maxlength="30"')}
       ${inp("sign_count", "Number of signs <span class=\"opt\">(optional)</span>", 'maxlength="4" inputmode="numeric"')}
       ${inp("note", "Private note <span class=\"opt\">(optional)</span>", 'maxlength="300"', true)}
     </div>
-    <label class="check" style="margin-top:14px"><input type="checkbox" name="send_email" value="yes"> <span>Email the link to the customer now</span></label>
+    <p class="hint" style="margin-top:12px">If you add a customer email, the link is emailed to them straight away.</p>
     <button class="go" type="submit">Create link</button>
   </form>
 </div>
@@ -254,7 +254,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   ${pending.map((i) => `<tr><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
   <td><input type="text" readonly value="${esc(link(i.code))}" id="l-${esc(i.code)}" style="height:32px;font-size:12px;min-width:12rem"><button type="button" class="smallbtn" data-copy="l-${esc(i.code)}">Copy</button></td>
   <td>${state(i)}</td>
-  <td>${i.revoked_at ? "" : `<form method="post" action="/agreements/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
+  <td>${i.revoked_at || i.expires_at < new Date().toISOString() ? "" : `${i.contact_email ? `<form method="post" action="/agreements/invites/${esc(i.code)}/email"><button class="smallbtn" type="submit">${i.emailed_at ? "Resend link" : "Send link"}</button></form><div class="mini" style="margin:2px 0 6px">${i.emailed_at ? `Emailed ${esc(fmt(i.emailed_at))}` : "Not emailed yet"}</div>` : '<div class="mini" style="margin-bottom:6px">No email: copy the link</div>'}<form method="post" action="/agreements/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
   </table></div>` : '<p class="mini">Nothing waiting.</p>'}
 </div>
 
