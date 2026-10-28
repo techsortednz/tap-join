@@ -19,7 +19,6 @@
 // Secrets: TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID. Everything else is in wrangler.toml.
 
 import template from "../assets/agreement-template.pdf";
-import blank from "../assets/agreement-blank.pdf";
 import meta from "../assets/agreement.json";
 import fontRegular from "../assets/Outfit-Regular.ttf";
 import fontSignature from "../assets/Caveat-Medium.ttf";
@@ -75,7 +74,8 @@ async function route(request, env, ctx) {
 
   // Public customer pages (jointap.techsorted.nz).
   if (path === "/") return Response.redirect("https://techsorted.nz/tap/", 302);
-  if (path === "/agreement.pdf" && method === "GET") return pdf(blank, `Tap-Sign-Service-Agreement-v${meta.version}.pdf`, "inline");
+  // The read-only layout, so nobody mistakes it for a form to fill in (signing happens online).
+  if (path === "/agreement.pdf" && method === "GET") return pdf(template, `Tap-Sign-Service-Agreement-v${meta.version}.pdf`, "inline");
   if (path === "/admin" || path.startsWith("/admin/")) return Response.redirect(`https://${env.HUB_HOST}/agreements`, 302);
 
   let m;
@@ -185,6 +185,7 @@ async function submitJoin(request, env, ctx, code) {
       fonts: { regular: fontRegular, signature: fontSignature },
       fields: {
         ...v,
+        page_slug: v.page_slug || "set by tap by techsorted",
         customer_signatory: check.signedName,
         customer_date: dateText,
         techsorted_signatory: env.COUNTERSIGN_NAME || "Shaun",
