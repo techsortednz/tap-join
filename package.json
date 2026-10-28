@@ -1,0 +1,17 @@
+{
+  "name": "tap-join",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "node test/pdf.test.mjs && node test/validate.test.mjs",
+    "db:local": "wrangler d1 migrations apply tap-join --local"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

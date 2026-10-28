@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<title>Tap Sign Service Agreement</title>
+<style>
+@font-face{font-family:"Orbitron";src:url("fonts/Orbitron.ttf");font-weight:400 900}
+@font-face{font-family:"Outfit";src:url("fonts/Outfit.ttf");font-weight:100 900}
+@page{size:A4;margin:12mm 13mm 10mm 13mm}
+:root{--navy:#060a2f;--blue:#2b9ad6;--ink:#1d2030;--muted:#5d6273;--line:#d5d9e2;--tint:#f3f6fa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Outfit",sans-serif;font-size:8.05pt;line-height:1.32;color:var(--ink)}
+b,strong{font-weight:600;color:var(--navy)}
+
+/* Header */
+.head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:3.2mm;border-bottom:1.6pt solid var(--navy)}
+.from{font-size:7.9pt;line-height:1.45;color:var(--muted)}
+.from .n{font-size:9.5pt;font-weight:600;color:var(--navy);margin-bottom:.6mm}
+.ph{background:#fff4c2;color:#6b5400;padding:0 1mm;border-radius:1mm}
+.brand{display:flex;align-items:center;gap:2.6mm}
+.brand svg{width:13mm;height:13mm}
+.wt b{display:block;font-family:"Orbitron";font-weight:800;font-size:21pt;line-height:.9;color:var(--navy);letter-spacing:.2pt}
+.wt .by{display:block;white-space:nowrap;margin-top:1.3mm;font-family:"Orbitron";font-weight:700;font-size:7.4pt;letter-spacing:.5pt;color:var(--navy)}
+.wt .by i{font-family:"Outfit";font-style:normal;font-weight:500;font-size:6.8pt;color:var(--muted)}
+.wt .by em{font-style:normal;color:var(--blue)}
+
+.title{display:flex;justify-content:space-between;align-items:baseline;margin:3mm 0 2.2mm}
+h1{white-space:nowrap;font-size:15pt;font-weight:600;color:var(--navy);letter-spacing:-.2pt}
+.ref{font-size:7.8pt;color:var(--muted)}
+
+h2{font-size:8.2pt;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.9pt;margin:0 0 1.3mm}
+
+/* Customer details */
+.cust{background:var(--tint);border-radius:2mm;padding:2.6mm 3mm 1.4mm}
+.grid{display:flex;flex-wrap:wrap;column-gap:4mm}
+.f{width:calc(50% - 2mm);display:flex;align-items:flex-end;gap:2mm;margin-bottom:.9mm}
+.f.full{width:100%}
+.f label{flex:none;width:25mm;font-size:7.6pt;color:var(--muted)}
+.f input{flex:1;height:4.8mm;border:0;border-bottom:.6pt solid #9aa1b2;background:transparent;font:inherit;font-size:8.5pt;color:var(--ink)}
+.f .pre{font-size:8.3pt;color:var(--navy);white-space:nowrap}
+
+/* Body columns */
+.cols{display:flex;gap:6mm;margin-top:2.8mm}
+.col{flex:1}
+section{margin-bottom:2.4mm}
+p{margin-bottom:1.2mm}
+ul{list-style:none}
+li{position:relative;padding-left:3.2mm;margin-bottom:.75mm}
+li::before{content:"";position:absolute;left:0;top:1.55mm;width:1.3mm;height:1.3mm;border-radius:50%;background:var(--blue)}
+ol{list-style:none;counter-reset:t}
+ol li::before{counter-increment:t;content:counter(t);background:none;width:auto;height:auto;top:0;font-size:7.4pt;font-weight:700;color:var(--blue)}
+.note{font-size:7.6pt;color:var(--muted)}
+
+/* Sign-off */
+.sign{border-top:1.2pt solid var(--navy);padding-top:2.6mm;margin-top:.6mm}
+.sign p{font-size:7.9pt;margin-bottom:1.4mm}
+.parties{display:flex;gap:6mm}
+.party{flex:1}
+.party .who{font-size:7.6pt;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.7pt;margin-bottom:1mm}
+.party .f{width:100%}
+.f.sig input{height:7.5mm}
+.record{margin-top:1.6mm}
+.record input{width:100%;height:3.6mm;border:0;background:transparent}
+.foot{margin-top:2.4mm;font-size:6.9pt;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<header class="head">
+  <div class="from">
+    <div class="n">tap by techsorted</div>
+    277a Hukanui Road, Chedworth<br>
+    Hamilton 3210<br>
+    027 652 5216 · shaun@techsorted.nz<br>
+    GST 081-992-487 · NZBN 9429050797646
+  </div>
+  <div class="brand">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#f3eee4"/><g fill="none" stroke="#060a2f" stroke-width="4.5" stroke-linecap="round"><path d="M22 25.5a10 10 0 0 1 0 13"/><path d="M29.5 19.5a19 19 0 0 1 0 25"/><path d="M37 13.5a28 28 0 0 1 0 37"/></g><circle cx="15.5" cy="32" r="3.6" fill="#2b9ad6"/></svg>
+    <div class="wt"><b>tap</b><span class="by"><i>by </i>tech<em>sorted</em></span></div>
+  </div>
+</header>
+
+<div class="title">
+  <h1>Tap Sign Service Agreement</h1>
+  <div class="ref">All prices exclude GST</div>
+</div>
+
+<div class="cust">
+  <h2>Customer details</h2>
+  <div class="grid">
+    <div class="f"><label>Business name</label><input name="business_name"></div>
+    <div class="f"><label>Legal entity / NZBN</label><input name="legal_entity"></div>
+    <div class="f"><label>Contact person</label><input name="contact_person"></div>
+    <div class="f"><label>Role</label><input name="contact_role"></div>
+    <div class="f"><label>Phone</label><input name="phone"></div>
+    <div class="f"><label>Accounts email</label><input name="accounts_email"></div>
+    <div class="f full"><label>Business address</label><input name="business_address"></div>
+    <div class="f"><label>Forms go to (email)</label><input name="forms_email"></div>
+    <div class="f"><label>Page address</label><span class="pre">tap.techsorted.nz/</span><input name="page_slug"></div>
+    <div class="f"><label>Xero quote no.</label><input name="quote_number"></div>
+    <div class="f"><label>Number of signs</label><input name="sign_count"></div>
+  </div>
+</div>
+
+<!--TERMS-->
+
+<div class="sign">
+  <p>By signing, you confirm the details above are correct and agree to these terms.</p>
+  <div class="parties">
+    <div class="party">
+      <div class="who">Customer</div>
+      <div class="f"><label>Name</label><input name="customer_signatory"></div>
+      <div class="f sig"><label>Signature</label><input name="customer_signature"></div>
+      <div class="f"><label>Date</label><input name="customer_date"></div>
+    </div>
+    <div class="party">
+      <div class="who">tap by techsorted</div>
+      <div class="f"><label>Name</label><input name="techsorted_signatory"></div>
+      <div class="f sig"><label>Signature</label><input name="techsorted_signature"></div>
+      <div class="f"><label>Date</label><input name="techsorted_date"></div>
+    </div>
+  </div>
+</div>
+
+<div class="record"><input name="signing_record"></div>
+<div class="foot">Agreement version {{VERSION}} · tap by techsorted is a TechSorted service · New Zealand owned and operated · techsorted.nz/tap</div>
+
+</body>
+</html>

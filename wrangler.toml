@@ -1,0 +1,42 @@
+name = "tap-join"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Public sign-up pages live at join.techsorted.nz (custom domain set in the dashboard,
+# see README). The admin page (/admin) is behind Cloudflare Access.
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tap-join"
+database_id = "REPLACE_WITH_D1_ID"   # from: Workers & Pages > D1 > tap-join
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "AGREEMENTS"
+bucket_name = "tap-agreements"
+
+# Pages, terms and the PDF template/fonts are bundled into the Worker.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[[rules]]
+type = "Data"
+globs = ["**/*.pdf", "**/*.ttf"]
+fallthrough = true
+
+# Not secret. Secrets (TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+# are set in the Worker's settings in the Cloudflare dashboard, never in this file.
+[vars]
+PUBLIC_ORIGIN = "https://join.techsorted.nz"
+TURNSTILE_SITEKEY = "REPLACE_WITH_TURNSTILE_SITEKEY"
+MAIL_FROM = "tap by techsorted <shaun@techsorted.nz>"
+NOTIFY_EMAIL = "shaun@techsorted.nz"
+COUNTERSIGN_NAME = "Shaun"
+INVITE_DAYS = "14"
+# Cloudflare Access for /admin (the "tap-join admin" Access app). If either is empty, /admin is closed.
+ACCESS_TEAM_DOMAIN = "techsortednz.cloudflareaccess.com"
+ACCESS_AUD = "REPLACE_WITH_ACCESS_AUD"
