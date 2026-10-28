@@ -50,6 +50,7 @@ MAIL_FROM = "Shaun at tap by techsorted <shaun@techsorted.nz>"
 REPLY_TO = "shaun@techsorted.nz"
 COUNTERSIGN_NAME = "Shaun"
 INVITE_DAYS = "14"
+MONTHLY_PRICE = "39.99"   # default monthly price ex GST on new links (change per link on the form)
 # Cloudflare Access for hub.techsorted.nz (the "techsorted hub" Access app). If either is empty, the hub is closed.
 ACCESS_TEAM_DOMAIN = "techsortednz.cloudflareaccess.com"
 ACCESS_AUD = "c8c55d7ab43fb0a380186aea39805d63733abb3eabe9ab929032bea3c01e14e1"  # techsorted hub app

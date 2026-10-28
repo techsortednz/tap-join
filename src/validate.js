@@ -13,7 +13,11 @@ export const CUSTOMER_FIELDS = [
   { name: "accounts_email", label: "Accounts email", required: true, max: 120, type: "email", email: true, hint: "Invoices and your signed copy go here" },
   { name: "business_address", label: "Business address", required: true, max: 200 },
   { name: "forms_email", label: "Forms go to (email)", max: 120, type: "email", email: true, hint: "Where feedback and catering enquiries are sent" },
-  { name: "page_slug", label: "Page address", max: 30, locked: true, prefix: "tap.techsorted.nz/" },
+  { name: "approved_email_1", label: "Approved email for updates", required: true, max: 120, type: "email", email: true, group: "approved",
+    hint: "Only approved addresses can send us specials and menu changes" },
+  { name: "approved_email_2", label: "Second approved email", max: 120, type: "email", email: true, group: "approved" },
+  { name: "approved_email_3", label: "Third approved email", max: 120, type: "email", email: true, group: "approved",
+    hint: "You can add more later by asking us" },
   { name: "quote_number", label: "Xero quote no.", max: 30, locked: true },
   { name: "sign_count", label: "Number of signs", max: 10, locked: true },
 ];
@@ -39,6 +43,8 @@ export function validateSignup(form, invite) {
     values[f.name] = v;
   }
   if (!values.forms_email) values.forms_email = values.accounts_email;
+  values.approved_emails = [...new Set(["approved_email_1", "approved_email_2", "approved_email_3"].map((k) => values[k].toLowerCase()).filter(Boolean))].join(", ");
+  values.page_slug = clean(invite.page_slug); // internal only: set by Shaun on the link, not shown to the customer
 
   const signedName = clean(form.get("signed_name")).slice(0, 80);
   if (signedName.length < 3 || !/\s/.test(signedName)) errors.signed_name = "Type your full name (first and last)";
@@ -58,13 +64,21 @@ export function validateInvite(form) {
     quote_number: clean(form.get("quote_number")).slice(0, 30),
     sign_count: clean(form.get("sign_count")).slice(0, 10),
     note: clean(form.get("note")).slice(0, 300),
+    go_live: clean(form.get("go_live")).slice(0, 10),
+    monthly_price: clean(form.get("monthly_price")).replace(/^\$/, "").slice(0, 10),
   };
   const errors = {};
   if (!v.business_name) errors.business_name = "Required";
   if (v.contact_email && !EMAIL.test(v.contact_email)) errors.contact_email = "Check the email address";
   if (v.page_slug && !SLUG.test(v.page_slug)) errors.page_slug = "2–30 lowercase letters or numbers";
   if (v.sign_count && !/^\d{1,4}$/.test(v.sign_count)) errors.sign_count = "A number";
+  if (v.go_live && !isDate(v.go_live)) errors.go_live = "Pick a date";
+  if (v.monthly_price && !/^\d{1,4}(\.\d{1,2})?$/.test(v.monthly_price)) errors.monthly_price = "A price like 39.99";
   return { values: v, errors, ok: Object.keys(errors).length === 0 };
+}
+
+export function isDate(s) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
 }
 
 export function sameName(a, b) {

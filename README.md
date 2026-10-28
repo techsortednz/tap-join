@@ -80,3 +80,10 @@ Then open http://localhost:8787/hub or http://localhost:8787/agreements (`npm ru
 - **Admin:** behind Cloudflare Access, and the Worker also verifies the Access token itself and fails closed.
 - **Storage:** signed PDFs sit in a private R2 bucket. They are served only through the hub, or to the customer's own link for 30 days. Nothing is committed to git.
 - **Retention:** the agreement says signed agreements are kept for 7 years after the agreement ends.
+
+## Billing (agreement v1.4)
+
+- First 30 days after go-live are free. Invoices go out around the 10th, in advance, for the following month, due by the 20th.
+- The first invoice is the first 10th after go-live and only charges days after the free 30 days, at a daily rate (`src/billing.js`, tests in `test/billing.test.mjs`).
+- Put a **planned go-live** date and **monthly price** on the link (allow for printing). After signing, each agreement on the hub shows the free-until date, the first invoice lines and total (Copy lines, for a Xero draft) and when to start the repeating invoice. Change the go-live date there when the signs actually go out.
+- The customer lists up to three **approved emails for updates**; Telegram shows them so they can be added to the specials sender list with `/addsender`.

@@ -17,7 +17,7 @@ const bytes = await stampAgreement({
     business_name: "Coffee Nation", legal_entity: "Coffee Nation Hamilton Limited", contact_person: "Paul Example",
     contact_role: "Owner", phone: "021 123 4567", accounts_email: "accounts@coffeenation.example",
     business_address: "123 Example Street, Hamilton Central, Hamilton 3204", forms_email: "hello@coffeenation.example",
-    page_slug: "coffeenation", quote_number: "QU-0042", sign_count: "6",
+    quote_number: "QU-0042", approved_emails: "paul@coffeenation.example, specials@coffeenation.example", sign_count: "6",
     customer_signatory: "Paul Example", customer_date: "28 October 2026",
     techsorted_signatory: "Shaun", techsorted_date: "28 October 2026",
   },

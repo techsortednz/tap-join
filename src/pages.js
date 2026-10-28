@@ -130,7 +130,7 @@ export function joinPage({ invite, terms, version, sitekey, values = {}, errors 
     }
     const wide = f.name === "business_address" ? "wide" : "";
     const e = errors[f.name];
-    const fromInvite = { accounts_email: invite.contact_email, contact_person: invite.contact_name }[f.name];
+    const fromInvite = { accounts_email: invite.contact_email, contact_person: invite.contact_name, approved_email_1: invite.contact_email }[f.name];
     const pre = f.name in values ? v(f.name) : fromInvite || "";
     return `<div class="${wide} ${e ? "bad" : ""}">
 <label class="l" for="${f.name}">${esc(f.label)}${f.required ? "" : ' <span class="opt">(optional)</span>'}</label>
@@ -218,13 +218,13 @@ export function statusPage(kind) {
 
 // ------------------------------------------------------------------ admin
 
-export function adminPage({ invites, agreements, origin, flash = null, errors = {}, values = {}, fmt }) {
+export function adminPage({ invites, agreements, origin, flash = null, errors = {}, values = {}, fmt, plan, defaultPrice = "39.99" }) {
   const pending = invites.filter((i) => !i.signed_at);
   const state = (i) =>
     i.revoked_at ? '<span class="pill no">Cancelled</span>' : i.expires_at < new Date().toISOString() ? '<span class="pill no">Expired</span>' : '<span class="pill">Waiting</span>';
   const link = (code) => `${origin}/j/${code}`;
-  const inp = (name, label, opts = "", wide = false) =>
-    `<div class="${wide ? "wide " : ""}${errors[name] ? "bad" : ""}"><label class="l" for="${name}">${label}</label><input id="${name}" name="${name}" type="text" value="${esc(values[name] || "")}" ${opts}>${errors[name] ? `<div class="err">${esc(errors[name])}</div>` : ""}</div>`;
+  const inp = (name, label, opts = "", wide = false, type = "text", dflt = "") =>
+    `<div class="${wide ? "wide " : ""}${errors[name] ? "bad" : ""}"><label class="l" for="${name}">${label}</label><input id="${name}" name="${name}" type="${type}" value="${esc(values[name] || dflt)}" ${opts}>${errors[name] ? `<div class="err">${esc(errors[name])}</div>` : ""}</div>`;
 
   const body = `
 <h1>Agreements</h1>
@@ -241,6 +241,8 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
       ${inp("page_slug", "Page slug <span class=\"opt\">(optional)</span>", 'maxlength="30" placeholder="yourbusiness"')}
       ${inp("quote_number", "Xero quote no. <span class=\"opt\">(optional)</span>", 'maxlength="30"')}
       ${inp("sign_count", "Number of signs <span class=\"opt\">(optional)</span>", 'maxlength="4" inputmode="numeric"')}
+      ${inp("go_live", "Planned go-live <span class=\"opt\">(allow for printing)</span>", "", false, "date")}
+      ${inp("monthly_price", "Monthly price, ex GST", 'maxlength="8" inputmode="decimal"', false, "text", defaultPrice)}
       ${inp("note", "Private note <span class=\"opt\">(optional)</span>", 'maxlength="300"', true)}
     </div>
     <p class="hint" style="margin-top:12px">If you add a customer email, the link is emailed to them straight away.</p>
@@ -251,7 +253,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
 <div class="card">
   <div class="step"><span>${pending.length}</span><h2>Waiting to be signed</h2></div>
   ${pending.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Link</th><th>Status</th><th></th></tr>
-  ${pending.map((i) => `<tr><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
+  ${pending.map((i) => `<tr><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}${i.go_live ? `<div class="mini">Planned go-live ${esc(dateNice(i.go_live))} · $${esc(i.monthly_price || defaultPrice)}/mo</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
   <td><input type="text" readonly value="${esc(link(i.code))}" id="l-${esc(i.code)}" style="height:32px;font-size:12px;min-width:12rem"><button type="button" class="smallbtn" data-copy="l-${esc(i.code)}">Copy</button></td>
   <td>${state(i)}</td>
   <td>${i.revoked_at || i.expires_at < new Date().toISOString() ? "" : `${i.contact_email ? `<form method="post" action="/agreements/invites/${esc(i.code)}/email"><button class="smallbtn" type="submit">${i.emailed_at ? "Resend link" : "Send link"}</button></form><div class="mini" style="margin:2px 0 6px">${i.emailed_at ? `Emailed ${esc(fmt(i.emailed_at))}` : "Not emailed yet"}</div>` : '<div class="mini" style="margin-bottom:6px">No email: copy the link</div>'}<form method="post" action="/agreements/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
@@ -261,13 +263,14 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
 <div class="card">
   <div class="step"><span>${agreements.length}</span><h2>Signed</h2></div>
   ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
-  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div></td>
+  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Updates from: ${esc(a.approved_emails)}</div>` : ""}</td>
   <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
-  <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>`).join("")}
+  <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>
+  <tr id="${esc(a.id)}"><td colspan="3" style="background:var(--tint);border-radius:0 0 10px 10px">${billingBox(a, plan(a), defaultPrice)}</td></tr>`).join("")}
   </table></div>` : '<p class="mini">No signed agreements yet.</p>'}
 </div>`;
 
-  const script = `document.addEventListener('click',function(e){var b=e.target.closest('[data-copy]');if(!b)return;var i=document.getElementById(b.dataset.copy);i.select();try{navigator.clipboard.writeText(i.value)}catch(_){document.execCommand('copy')}b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});`;
+  const script = `document.addEventListener('click',function(e){var b=e.target.closest('[data-copy]');if(!b)return;var i=document.getElementById(b.dataset.copy);try{navigator.clipboard.writeText(i.value)}catch(_){i.hidden=false;i.select();document.execCommand('copy');i.hidden=true}b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});`;
   return layout({ title: "Agreements – tap by techsorted", body, script, admin: true });
 }
 
@@ -308,4 +311,33 @@ ${card("/agreements", "Agreements", "Make sign-up links and see signed agreement
 .hubcard p{color:var(--muted);font-size:15px;margin-bottom:6px}
 .go2{display:inline-block;margin-top:8px;font-weight:600;color:var(--blue)}</style>`
   );
+}
+
+function dateNice(isoDate) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return `${d} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
+}
+
+function billingBox(a, p, defaultPrice) {
+  const money = (n) => `$${n.toFixed(2)}`;
+  const form = `<form method="post" action="/agreements/signed/${esc(a.id)}/golive" class="row" style="gap:8px;align-items:flex-end">
+  <div><label class="l" for="gl-${esc(a.id)}" style="font-size:13px">Go-live date</label><input id="gl-${esc(a.id)}" type="date" name="go_live" value="${esc(a.go_live || "")}" style="height:36px;width:auto"></div>
+  <div><label class="l" for="mp-${esc(a.id)}" style="font-size:13px">$/month ex GST</label><input id="mp-${esc(a.id)}" type="text" name="monthly_price" value="${esc(a.monthly_price || defaultPrice)}" inputmode="decimal" style="height:36px;width:6.5rem"></div>
+  <button class="smallbtn" type="submit" style="height:36px">Save</button></form>`;
+  if (!p) return `<b style="color:var(--navy)">Billing</b><p class="mini" style="margin:4px 0 8px">Add the go-live date to work out the free period and first invoice.</p>${form}`;
+  const lines = p.firstInvoice.lines
+    .map((l) => `<tr><td style="padding:3px 0;border:0">${esc(l.description)}</td><td style="padding:3px 0;border:0;text-align:right;white-space:nowrap">${money(l.amount)}</td></tr>`)
+    .join("");
+  const copyText = p.firstInvoice.lines.map((l) => `${l.description}\t${l.amount.toFixed(2)}`).join("\n");
+  return `<b style="color:var(--navy)">Billing</b>
+<div class="mini" style="margin:4px 0 8px">Free until <b>${esc(p.text.freeUntil)}</b> (30 days from go-live)</div>
+<div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+  <div style="font-size:13px;color:var(--muted)">First invoice (draft in Xero): date <b>${esc(p.text.invoiceDate)}</b>, due <b>${esc(p.text.due)}</b></div>
+  <table style="margin-top:6px;font-size:14px">${lines}
+  <tr><td style="padding:6px 0 0;border:0;font-weight:600">Total ex GST</td><td style="padding:6px 0 0;border:0;text-align:right;font-weight:600">${money(p.firstInvoice.total)}</td></tr></table>
+  <textarea id="cp-${esc(a.id)}" readonly hidden>${esc(copyText)}</textarea>
+  <button type="button" class="smallbtn" data-copy="cp-${esc(a.id)}" style="margin-top:6px">Copy lines</button>
+</div>
+<div class="mini" style="margin-bottom:8px">Then set the Xero repeating invoice to start <b>${esc(p.text.repeatFrom)}</b> (for ${esc(p.repeating.forMonth)}), monthly on the 10th, due the 20th, ${money(p.repeating.amount)} ex GST.</div>
+${form}`;
 }

@@ -52,7 +52,6 @@ export function inviteEmail({ v, link, expires }) {
     ["Business", v.business_name],
     ["Xero quote", v.quote_number],
     ["Signs", v.sign_count],
-    ["Your page", v.page_slug ? `tap.techsorted.nz/${v.page_slug}` : ""],
   ];
   const text = `${greet(v.contact_name)}
 

@@ -27,7 +27,8 @@ import terms from "../agreement/terms.html";
 import { verifyAccessJwt } from "./access.js";
 import { stampAgreement } from "./pdf.js";
 import { sendEmail, sendTelegram, verifyTurnstile } from "./notify.js";
-import { validateSignup, validateInvite } from "./validate.js";
+import { validateSignup, validateInvite, isDate } from "./validate.js";
+import { billingPlan } from "./billing.js";
 import { joinPage, signedPage, statusPage, adminPage, hubPage } from "./pages.js";
 import { inviteEmail, signedEmail } from "./emails.js";
 
@@ -69,6 +70,7 @@ async function route(request, env, ctx) {
     if ((m = path.match(/^\/agreements\/invites\/([^/]+)\/email$/)) && method === "POST") return resendInvite(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
+    if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/golive$/)) && method === "POST") return setGoLive(request, env, m[1]);
     return text("Not found", 404);
   }
 
@@ -185,7 +187,6 @@ async function submitJoin(request, env, ctx, code) {
       fonts: { regular: fontRegular, signature: fontSignature },
       fields: {
         ...v,
-        page_slug: v.page_slug || "set by tap by techsorted",
         customer_signatory: check.signedName,
         customer_date: dateText,
         techsorted_signatory: env.COUNTERSIGN_NAME || "Shaun",
@@ -206,12 +207,13 @@ async function submitJoin(request, env, ctx, code) {
       env.DB.prepare(
         `INSERT INTO agreements (id, invite_code, terms_version, business_name, legal_entity, contact_person, contact_role, phone,
           accounts_email, business_address, forms_email, page_slug, quote_number, sign_count, signed_name, signed_at, ip, country,
-          user_agent, countersigned_by, pdf_key, pdf_sha256)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          user_agent, countersigned_by, pdf_key, pdf_sha256, go_live, monthly_price, approved_emails)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         id, code, meta.version, v.business_name, v.legal_entity, v.contact_person, v.contact_role, v.phone,
         v.accounts_email, v.business_address, v.forms_email, v.page_slug, v.quote_number, v.sign_count, check.signedName, nowIso, ip,
-        request.cf?.country || "", (request.headers.get("User-Agent") || "").slice(0, 300), env.COUNTERSIGN_NAME || "Shaun", key, sha
+        request.cf?.country || "", (request.headers.get("User-Agent") || "").slice(0, 300), env.COUNTERSIGN_NAME || "Shaun", key, sha,
+        invite.go_live || null, invite.monthly_price || env.MONTHLY_PRICE || "39.99", v.approved_emails
       ),
       env.DB.prepare("UPDATE invites SET agreement_id = ? WHERE code = ?").bind(id, code),
     ]);
@@ -253,6 +255,11 @@ async function deliverCopy(env, a, invite, bytes) {
   return mail;
 }
 
+function planLine(a) {
+  const p = billingPlan(a.go_live, Number(a.monthly_price || 39.99));
+  return `Planned go-live ${nzDate(new Date(a.go_live + "T00:00:00"))}: free to ${p.text.freeUntil}, first invoice ${p.text.invoiceDate} $${p.firstInvoice.total.toFixed(2)} + GST`;
+}
+
 function telegramText(env, a, emailed) {
   return [
     `✍️ ${a.business_name} signed the Tap Sign agreement`,
@@ -261,7 +268,9 @@ function telegramText(env, a, emailed) {
     [a.quote_number && `Quote ${a.quote_number}`, a.sign_count && `${a.sign_count} signs`, a.page_slug && `tap.techsorted.nz/${a.page_slug}`]
       .filter(Boolean)
       .join(" · "),
-    emailed ? "Signed copy emailed to them and you." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
+    a.approved_emails ? `Approved for updates: ${a.approved_emails} (add with /addsender)` : "",
+    a.go_live ? planLine(a) : "",
+    emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
     "Next: send the setup and signs invoice.",
     `https://${env.HUB_HOST}/agreements`,
   ]
@@ -307,11 +316,22 @@ async function showAdmin(env, url, extra = {}) {
       ? { title: "Link cancelled." }
       : url.searchParams.get("linksent")
         ? { title: url.searchParams.get("linksent") === "1" ? "Link emailed to the customer." : "The link email didn't send. Copy the link and send it yourself." }
+      : url.searchParams.get("golive")
+        ? { title: url.searchParams.get("golive") === "1" ? "Go-live date saved." : "Check the date and price, then try again." }
       : url.searchParams.get("resent")
         ? { title: url.searchParams.get("resent") === "1" ? "Signed copy emailed again." : "The email still didn't send. Download the PDF and send it yourself." }
         : null;
   return html(
-    adminPage({ invites: inv.results, agreements: agr.results, origin: env.PUBLIC_ORIGIN, flash, fmt: (iso) => nzDateTime(new Date(iso)), ...extra }),
+    adminPage({
+      invites: inv.results,
+      agreements: agr.results,
+      origin: env.PUBLIC_ORIGIN,
+      flash,
+      fmt: (iso) => nzDateTime(new Date(iso)),
+      plan: (a) => (a.go_live ? billingPlan(a.go_live, Number(a.monthly_price || env.MONTHLY_PRICE || 39.99)) : null),
+      defaultPrice: env.MONTHLY_PRICE || "39.99",
+      ...extra,
+    }),
     extra.errors ? 400 : 200,
     { "Cache-Control": "no-store" }
   );
@@ -327,10 +347,10 @@ async function createInvite(request, env, url) {
   const days = Math.min(60, Math.max(1, parseInt(env.INVITE_DAYS || "14", 10) || 14));
   const expires = new Date(now.getTime() + days * 86400_000);
   await env.DB.prepare(
-    `INSERT INTO invites (code, created_at, expires_at, business_name, contact_name, contact_email, page_slug, quote_number, sign_count, note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO invites (code, created_at, expires_at, business_name, contact_name, contact_email, page_slug, quote_number, sign_count, note, go_live, monthly_price)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(code, now.toISOString(), expires.toISOString(), v.business_name, v.contact_name, v.contact_email, v.page_slug, v.quote_number, v.sign_count, v.note)
+    .bind(code, now.toISOString(), expires.toISOString(), v.business_name, v.contact_name, v.contact_email, v.page_slug, v.quote_number, v.sign_count, v.note, v.go_live || null, v.monthly_price || env.MONTHLY_PRICE || "39.99")
     .run();
 
   // Always email the link when there's a customer email; otherwise Shaun copies it from the page.
@@ -363,6 +383,18 @@ async function revokeInvite(env, code) {
       .run();
   }
   return redirect("/agreements?revoked=1");
+}
+
+async function setGoLive(request, env, id) {
+  if (!ID_RE.test(id)) return text("Not found", 404);
+  const form = await request.formData();
+  const goLive = String(form.get("go_live") || "").trim();
+  const price = String(form.get("monthly_price") || "").trim().replace(/^\$/, "");
+  if ((goLive && !isDate(goLive)) || (price && !/^\d{1,4}(\.\d{1,2})?$/.test(price))) return redirect("/agreements?golive=0");
+  await env.DB.prepare("UPDATE agreements SET go_live = ?, monthly_price = COALESCE(NULLIF(?, ''), monthly_price) WHERE id = ?")
+    .bind(goLive || null, price, id)
+    .run();
+  return redirect(`/agreements?golive=1#${id}`);
 }
 
 async function resendCopy(env, id) {

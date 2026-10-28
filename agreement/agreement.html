@@ -33,10 +33,10 @@ h2{font-size:8.2pt;font-weight:700;color:var(--blue);text-transform:uppercase;le
 /* Customer details */
 .cust{background:var(--tint);border-radius:2mm;padding:2.6mm 3mm 1.4mm}
 .grid{display:flex;flex-wrap:wrap;column-gap:4mm}
-.f{width:calc(50% - 2mm);display:flex;align-items:flex-end;gap:2mm;margin-bottom:.9mm}
+.f{width:calc(50% - 2mm);display:flex;align-items:flex-end;gap:2mm;margin-bottom:.5mm}
 .f.full{width:100%}
-.f label{flex:none;width:25mm;font-size:7.6pt;color:var(--muted)}
-.f input{flex:1;height:4.8mm;border:0;border-bottom:.6pt solid #9aa1b2;background:transparent;font:inherit;font-size:8.5pt;color:var(--ink)}
+.f label{flex:none;width:27mm;font-size:7.6pt;color:var(--muted)}
+.f input{flex:1;height:4.5mm;border:0;border-bottom:.6pt solid #9aa1b2;background:transparent;font:inherit;font-size:8.5pt;color:var(--ink)}
 .f .pre{font-size:8.3pt;color:var(--navy);white-space:nowrap}
 
 /* Body columns */
@@ -91,16 +91,16 @@ ol li::before{counter-increment:t;content:counter(t);background:none;width:auto;
   <h2>Customer details</h2>
   <div class="grid">
     <div class="f"><label>Business name</label><input name="business_name"></div>
+    <div class="f"><label>Xero quote no.</label><input name="quote_number"></div>
     <div class="f"><label>Legal entity / NZBN</label><input name="legal_entity"></div>
+    <div class="f"><label>Number of signs</label><input name="sign_count"></div>
     <div class="f"><label>Contact person</label><input name="contact_person"></div>
     <div class="f"><label>Role</label><input name="contact_role"></div>
     <div class="f"><label>Phone</label><input name="phone"></div>
     <div class="f"><label>Accounts email</label><input name="accounts_email"></div>
     <div class="f full"><label>Business address</label><input name="business_address"></div>
-    <div class="f"><label>Forms go to (email)</label><input name="forms_email"></div>
-    <div class="f"><label>Page address</label><span class="pre">tap.techsorted.nz/</span><input name="page_slug"></div>
-    <div class="f"><label>Xero quote no.</label><input name="quote_number"></div>
-    <div class="f"><label>Number of signs</label><input name="sign_count"></div>
+    <div class="f full"><label>Forms go to (email)</label><input name="forms_email"></div>
+    <div class="f full"><label>Approved for updates</label><input name="approved_emails"></div>
   </div>
 </div>
 
