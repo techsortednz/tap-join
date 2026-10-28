@@ -5,7 +5,7 @@
 import { escapeHtml as e } from "./validate.js";
 
 const FOOT =
-  "tap by techsorted · 277a Hukanui Road, Chedworth, Hamilton 3210 · 027 652 5216";
+  "tap by techsorted · Matangi, Hamilton 3284 · +64 276525216";
 
 function layout({ preheader, body }) {
   return `<!doctype html>
