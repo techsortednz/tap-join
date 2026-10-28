@@ -244,7 +244,6 @@ async function deliverCopy(env, a, invite, bytes) {
   const msg = signedEmail({ a, when: nzDateTime(new Date(a.signed_at)) });
   const mail = await sendEmail(env, {
     to: recipients,
-    bcc: env.NOTIFY_EMAIL ? [env.NOTIFY_EMAIL] : [],
     ...msg,
     attachment: { filename: `Tap-Sign-Agreement-${slugish(a.business_name)}-${a.id}.pdf`, bytes },
   });

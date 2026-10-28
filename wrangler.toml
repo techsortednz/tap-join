@@ -4,7 +4,7 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Public sign-up pages live at jointap.techsorted.nz (custom domain set in the dashboard,
-# see README). The admin page (/admin) is behind Cloudflare Access.
+# see README). Admin lives on the hub (hub.techsorted.nz), behind Cloudflare Access.
 workers_dev = false
 preview_urls = false
 
@@ -48,7 +48,6 @@ HUB_HOST = "hub.techsorted.nz"
 TURNSTILE_SITEKEY = "0x4AAAAAAFltpbJR-I-H1Lwk"   # shared "Tap Contact Form Human Check" widget
 MAIL_FROM = "Shaun at tap by techsorted <shaun@techsorted.nz>"
 REPLY_TO = "shaun@techsorted.nz"
-NOTIFY_EMAIL = "shaun@techsorted.nz"
 COUNTERSIGN_NAME = "Shaun"
 INVITE_DAYS = "14"
 # Cloudflare Access for hub.techsorted.nz (the "techsorted hub" Access app). If either is empty, the hub is closed.

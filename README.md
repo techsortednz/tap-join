@@ -2,7 +2,7 @@
 
 Online sign-up and e-signing for new Tap Sign customers, at **jointap.techsorted.nz**.
 
-You make a private sign-up link for a customer. They open it on their phone and do three things: check their details, read the agreement, then tick two boxes and type their full name to sign. The Worker stamps their details and signature onto the agreement PDF and stores it. It then emails the signed copy to them (BCC you) and pings the Tap Signs Telegram bot.
+You make a private sign-up link for a customer. They open it on their phone and do three things: check their details, read the agreement, then tick two boxes and type their full name to sign. The Worker stamps their details and signature onto the agreement PDF and stores it. It then emails the signed copy to them and pings the Tap Signs Telegram bot.
 
 Under the Contract and Commercial Law Act 2017 (Part 4), an electronic signature is valid if it identifies the person and shows they meant to sign. Every signature records:
 - the typed name and both tick boxes (agree, authorised to sign)
@@ -14,7 +14,7 @@ Under the Contract and Commercial Law Act 2017 (Part 4), an electronic signature
 1. Open **https://hub.techsorted.nz** (your private hub, one Cloudflare Access login for Stats and Agreements) and go to **Agreements**.
 2. Fill in **New sign-up link**: business name, plus optional customer email, page slug, Xero quote number, number of signs and a private note. The slug, quote and number of signs appear on the agreement locked, so the customer can't change them.
 3. Tick **Email the link to the customer now**, or copy the link and send it yourself. Links last 14 days (`INVITE_DAYS`) and work only once.
-4. When they sign, you get a Telegram message and a BCC of their email. The signed PDF is under **Signed** on the Agreements page, with a **Resend copy** button if the email didn't go.
+4. When they sign, you get a Telegram message (you are not copied on their email). The signed PDF is under **Signed** on the Agreements page, with a **Resend copy** button if the email didn't go.
 5. To cancel a link nobody has used yet, press **Cancel** on it.
 
 The customer can download their signed copy from the same link for 30 days afterwards.
