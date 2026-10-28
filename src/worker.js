@@ -1,6 +1,6 @@
 // tap-join: online sign-up and e-signing for Tap Sign customers.
 //
-// Public (join.techsorted.nz):
+// Public (jointap.techsorted.nz):
 //   GET  /j/<code>                 the customer's sign-up page (details, terms, tick boxes, typed signature)
 //   POST /j/<code>                 sign: Turnstile check, stamp the PDF, store it, email it, ping Telegram
 //   GET  /j/<code>/agreement.pdf   the signed copy (for 30 days after signing)
@@ -10,6 +10,7 @@
 //   GET  /admin                    make sign-up links, see who's signed, download PDFs
 //   POST /admin/invites            make a link (optionally email it to the customer)
 //   POST /admin/invites/<code>/revoke
+//   POST /admin/agreements/<id>/resend   email the signed copy again
 //   GET  /admin/agreements/<id>.pdf
 //
 // Storage: D1 (binding DB) for invites and agreement records, R2 (binding AGREEMENTS) for the signed PDFs.
@@ -25,8 +26,9 @@ import terms from "../agreement/terms.html";
 import { verifyAccessJwt } from "./access.js";
 import { stampAgreement } from "./pdf.js";
 import { sendEmail, sendTelegram, verifyTurnstile } from "./notify.js";
-import { validateSignup, validateInvite, escapeHtml } from "./validate.js";
+import { validateSignup, validateInvite } from "./validate.js";
 import { joinPage, signedPage, statusPage, adminPage } from "./pages.js";
+import { inviteEmail, signedEmail } from "./emails.js";
 
 const TZ = "Pacific/Auckland";
 const DOWNLOAD_DAYS = 30;
@@ -71,6 +73,7 @@ async function route(request, env, ctx) {
     if (path === "/admin/invites" && method === "POST") return createInvite(request, env, url);
     if ((m = path.match(/^\/admin\/invites\/([^/]+)\/revoke$/)) && method === "POST") return revokeInvite(env, m[1]);
     if ((m = path.match(/^\/admin\/agreements\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
+    if ((m = path.match(/^\/admin\/agreements\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
   }
 
   return text("Not found", 404);
@@ -197,39 +200,51 @@ async function submitJoin(request, env, ctx, code) {
     return again("Sorry, something went wrong saving your signature. Please try again, or call 027 652 5216.", 500);
   }
 
-  // Send the copy and the ping before replying, so the page can say whether the email went.
-  const filename = `Tap-Sign-Agreement-${slugish(v.business_name)}-${id}.pdf`;
-  const recipients = [...new Set([v.accounts_email, invite.contact_email].filter(Boolean).map((s) => s.toLowerCase()))];
+  // Reply straight away; the email and Telegram ping happen in the background, so the customer
+  // never waits on SMTP2GO (it once took 60s with the PDF attached).
+  ctx.waitUntil(
+    (async () => {
+      const agreement = await env.DB.prepare("SELECT * FROM agreements WHERE id = ?").bind(id).first();
+      const mail = await deliverCopy(env, agreement, invite, bytes);
+      await sendTelegram(env, telegramText(env, agreement, mail.ok));
+    })()
+  );
+
+  return redirect(`/j/${code}`);
+}
+
+async function deliverCopy(env, a, invite, bytes) {
+  if (!bytes) {
+    const obj = await env.AGREEMENTS.get(a.pdf_key);
+    if (!obj) return { ok: false };
+    bytes = new Uint8Array(await obj.arrayBuffer());
+  }
+  const recipients = [...new Set([a.accounts_email, invite?.contact_email].filter(Boolean).map((s) => s.toLowerCase()))];
+  const msg = signedEmail({ a, when: nzDateTime(new Date(a.signed_at)) });
   const mail = await sendEmail(env, {
     to: recipients,
     bcc: env.NOTIFY_EMAIL ? [env.NOTIFY_EMAIL] : [],
-    subject: `Your signed Tap Sign agreement (${id})`,
-    text: signedEmailText({ v, id, name: check.signedName, when: nzDateTime(now) }),
-    html: signedEmailHtml({ v, id, name: check.signedName, when: nzDateTime(now) }),
-    attachment: { filename, bytes },
+    ...msg,
+    attachment: { filename: `Tap-Sign-Agreement-${slugish(a.business_name)}-${a.id}.pdf`, bytes },
   });
-  if (mail.ok) await env.DB.prepare("UPDATE agreements SET email_sent = 1 WHERE id = ?").bind(id).run();
+  if (mail.ok) await env.DB.prepare("UPDATE agreements SET email_sent = 1 WHERE id = ?").bind(a.id).run();
+  return mail;
+}
 
-  ctx.waitUntil(
-    sendTelegram(
-      env,
-      [
-        `✍️ ${v.business_name} signed the Tap Sign agreement`,
-        `Ref ${id} (v${meta.version})`,
-        `Signed by ${check.signedName}${v.contact_role ? ` (${v.contact_role})` : ""}`,
-        [v.quote_number && `Quote ${v.quote_number}`, v.sign_count && `${v.sign_count} signs`, v.page_slug && `tap.techsorted.nz/${v.page_slug}`]
-          .filter(Boolean)
-          .join(" · "),
-        mail.ok ? "Signed copy emailed to them and you." : "⚠️ The email copy didn't send. Download it from the admin page.",
-        "Next: send the setup and signs invoice.",
-        `${env.PUBLIC_ORIGIN}/admin`,
-      ]
-        .filter(Boolean)
-        .join("\n")
-    )
-  );
-
-  return redirect(`/j/${code}?signed=1`);
+function telegramText(env, a, emailed) {
+  return [
+    `✍️ ${a.business_name} signed the Tap Sign agreement`,
+    `Ref ${a.id} (v${a.terms_version})`,
+    `Signed by ${a.signed_name}${a.contact_role ? ` (${a.contact_role})` : ""}`,
+    [a.quote_number && `Quote ${a.quote_number}`, a.sign_count && `${a.sign_count} signs`, a.page_slug && `tap.techsorted.nz/${a.page_slug}`]
+      .filter(Boolean)
+      .join(" · "),
+    emailed ? "Signed copy emailed to them and you." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
+    "Next: send the setup and signs invoice.",
+    `${env.PUBLIC_ORIGIN}/admin`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 async function customerDownload(env, code) {
@@ -268,7 +283,9 @@ async function showAdmin(env, url, extra = {}) {
       }
     : url.searchParams.get("revoked")
       ? { title: "Link cancelled." }
-      : null;
+      : url.searchParams.get("resent")
+        ? { title: url.searchParams.get("resent") === "1" ? "Signed copy emailed again." : "The email still didn't send. Download the PDF and send it yourself." }
+        : null;
   return html(
     adminPage({ invites: inv.results, agreements: agr.results, origin: env.PUBLIC_ORIGIN, flash, fmt: (iso) => nzDateTime(new Date(iso)), ...extra }),
     extra.errors ? 400 : 200,
@@ -286,21 +303,16 @@ async function createInvite(request, env, url) {
   const days = Math.min(60, Math.max(1, parseInt(env.INVITE_DAYS || "14", 10) || 14));
   const expires = new Date(now.getTime() + days * 86400_000);
   await env.DB.prepare(
-    `INSERT INTO invites (code, created_at, expires_at, business_name, contact_email, page_slug, quote_number, sign_count, note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO invites (code, created_at, expires_at, business_name, contact_name, contact_email, page_slug, quote_number, sign_count, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(code, now.toISOString(), expires.toISOString(), v.business_name, v.contact_email, v.page_slug, v.quote_number, v.sign_count, v.note)
+    .bind(code, now.toISOString(), expires.toISOString(), v.business_name, v.contact_name, v.contact_email, v.page_slug, v.quote_number, v.sign_count, v.note)
     .run();
 
   let emailed = "";
   if (form.get("send_email") === "yes" && v.contact_email) {
     const link = `${env.PUBLIC_ORIGIN}/j/${code}`;
-    const res = await sendEmail(env, {
-      to: [v.contact_email],
-      subject: `Your Tap Sign agreement for ${v.business_name}`,
-      text: inviteEmailText({ v, link, expires: nzDate(expires) }),
-      html: inviteEmailHtml({ v, link, expires: nzDate(expires) }),
-    });
+    const res = await sendEmail(env, { to: [v.contact_email], ...inviteEmail({ v, link, expires: nzDate(expires) }) });
     emailed = res.ok ? "1" : "0";
   }
   return redirect(`/admin?made=${code}${emailed ? `&emailed=${emailed}` : ""}`);
@@ -315,6 +327,15 @@ async function revokeInvite(env, code) {
   return redirect("/admin?revoked=1");
 }
 
+async function resendCopy(env, id) {
+  if (!ID_RE.test(id)) return text("Not found", 404);
+  const a = await env.DB.prepare("SELECT * FROM agreements WHERE id = ?").bind(id).first();
+  if (!a) return text("Not found", 404);
+  const invite = await env.DB.prepare("SELECT * FROM invites WHERE code = ?").bind(a.invite_code).first();
+  const mail = await deliverCopy(env, a, invite, null);
+  return redirect(`/admin?resent=${mail.ok ? "1" : "0"}`);
+}
+
 async function adminDownload(env, id) {
   if (!ID_RE.test(id)) return text("Not found", 404);
   const a = await env.DB.prepare("SELECT id, pdf_key, business_name FROM agreements WHERE id = ?").bind(id).first();
@@ -322,58 +343,6 @@ async function adminDownload(env, id) {
   const obj = await env.AGREEMENTS.get(a.pdf_key);
   if (!obj) return text("PDF missing from storage", 404);
   return pdf(obj.body, `Tap-Sign-Agreement-${slugish(a.business_name)}-${a.id}.pdf`, "inline");
-}
-
-// ------------------------------------------------------------------ emails
-
-function signedEmailText({ v, id, name, when }) {
-  return `Hi ${v.contact_person},
-
-Thanks for signing up to Tap Signs. Your signed agreement for ${v.business_name} is attached.
-
-Reference: ${id}
-Signed by: ${name}
-Signed: ${when}
-
-What happens next:
-1. You'll get the invoice for setup and signs.
-2. Once it's paid, we build your page and print your signs.
-3. You approve the page, then your signs go out on your tables.
-
-Any questions, just reply to this email or call 027 652 5216.
-
-Shaun
-tap by techsorted`;
-}
-
-function signedEmailHtml(a) {
-  return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1d2030">${escapeHtml(signedEmailText(a)).replace(/\n/g, "<br>")}</div>`;
-}
-
-function inviteEmailText({ v, link, expires }) {
-  return `Hi,
-
-Here's your Tap Sign Service Agreement for ${v.business_name}. It takes about two minutes to check your details and sign online:
-
-${link}
-
-The link works until ${expires}. You'll get a signed PDF copy by email once it's done.
-
-Any questions, just reply or call 027 652 5216.
-
-Shaun
-tap by techsorted`;
-}
-
-function inviteEmailHtml({ v, link, expires }) {
-  const e = escapeHtml;
-  return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1d2030">
-<p>Hi,</p>
-<p>Here's your Tap Sign Service Agreement for <b>${e(v.business_name)}</b>. It takes about two minutes to check your details and sign online.</p>
-<p><a href="${e(link)}" style="display:inline-block;background:#060a2f;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold">Review and sign</a></p>
-<p style="color:#5d6273;font-size:13px">Or copy this link: ${e(link)}<br>The link works until ${e(expires)}.</p>
-<p>You'll get a signed PDF copy by email once it's done. Any questions, just reply or call 027 652 5216.</p>
-<p>Shaun<br>tap by techsorted</p></div>`;
 }
 
 // ------------------------------------------------------------------ helpers

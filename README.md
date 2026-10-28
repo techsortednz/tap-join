@@ -1,6 +1,6 @@
 # tap-join
 
-Online sign-up and e-signing for new Tap Sign customers, at **join.techsorted.nz**.
+Online sign-up and e-signing for new Tap Sign customers, at **jointap.techsorted.nz**.
 
 You make a private sign-up link for a customer. They open it on their phone and do three things: check their details, read the agreement, then tick two boxes and type their full name to sign. The Worker stamps their details and signature onto the agreement PDF and stores it. It then emails the signed copy to them (BCC you) and pings the Tap Signs Telegram bot.
 
@@ -11,7 +11,7 @@ Under the Contract and Commercial Law Act 2017 (Part 4), an electronic signature
 
 ## Everyday use
 
-1. Open **https://join.techsorted.nz/admin** and sign in with Cloudflare Access.
+1. Open **https://jointap.techsorted.nz/admin** and sign in with Cloudflare Access.
 2. Fill in **New sign-up link**: business name, plus optional customer email, page slug, Xero quote number, number of signs and a private note. The slug, quote and number of signs appear on the agreement locked, so the customer can't change them.
 3. Tick **Email the link to the customer now**, or copy the link and send it yourself. Links last 14 days (`INVITE_DAYS`) and work only once.
 4. When they sign, you get a Telegram message and a BCC of their email. The signed PDF is under **Signed** on the admin page.
@@ -50,9 +50,9 @@ Signed agreements keep the version they were signed on, because each one is stor
 1. **D1:** `npx wrangler d1 create tap-join --location oc`, then put the `database_id` into `wrangler.toml`, then run `npx wrangler d1 migrations apply tap-join --remote`.
 2. **R2:** create a bucket called `tap-agreements` with location hint Oceania. Keep it private, with no public access and no r2.dev URL.
 3. **Worker:** connect this repo in Workers & Pages (Workers Builds, deploy `main`), the same as tap-stats.
-4. **Custom domain:** in the Worker's Settings, go to Domains & Routes and add `join.techsorted.nz`.
-5. **Turnstile:** either add `join.techsorted.nz` to the existing widget's hostnames or make a new widget. Put its site key in `TURNSTILE_SITEKEY` in `wrangler.toml`.
-6. **Access:** create a self-hosted Access application for `join.techsorted.nz/admin` (path `admin`) with the same "Cloudflare account members" policy as tap-stats. Copy its Application Audience (AUD) tag into `ACCESS_AUD`. Only `/admin` is behind Access; the customer pages must stay public.
+4. **Custom domain:** in the Worker's Settings, go to Domains & Routes and add `jointap.techsorted.nz`.
+5. **Turnstile:** either add `jointap.techsorted.nz` to the existing widget's hostnames or make a new widget. Put its site key in `TURNSTILE_SITEKEY` in `wrangler.toml`.
+6. **Access:** create a self-hosted Access application for `jointap.techsorted.nz/admin` (path `admin`) with the same "Cloudflare account members" policy as tap-stats. Copy its Application Audience (AUD) tag into `ACCESS_AUD`. Only `/admin` is behind Access; the customer pages must stay public.
 7. **Secrets** (Worker, Settings, Variables and Secrets, type Secret):
    - `TURNSTILE_SECRET`
    - `SMTP2GO_API_KEY`: the same key the cafe forms use. `MAIL_FROM` must be on the verified `techsorted.nz` sender domain.

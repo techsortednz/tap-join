@@ -3,10 +3,14 @@ main = "src/worker.js"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Public sign-up pages live at join.techsorted.nz (custom domain set in the dashboard,
+# Public sign-up pages live at jointap.techsorted.nz (custom domain set in the dashboard,
 # see README). The admin page (/admin) is behind Cloudflare Access.
 workers_dev = false
 preview_urls = false
+
+# Logs in the dashboard (Workers > tap-join > Logs): email results, errors, timings.
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
@@ -32,9 +36,10 @@ fallthrough = true
 # Not secret. Secrets (TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
 # are set in the Worker's settings in the Cloudflare dashboard, never in this file.
 [vars]
-PUBLIC_ORIGIN = "https://join.techsorted.nz"
+PUBLIC_ORIGIN = "https://jointap.techsorted.nz"
 TURNSTILE_SITEKEY = "0x4AAAAAAFltpbJR-I-H1Lwk"   # shared "Tap Contact Form Human Check" widget
-MAIL_FROM = "tap by techsorted <shaun@techsorted.nz>"
+MAIL_FROM = "Shaun at tap by techsorted <shaun@techsorted.nz>"
+REPLY_TO = "shaun@techsorted.nz"
 NOTIFY_EMAIL = "shaun@techsorted.nz"
 COUNTERSIGN_NAME = "Shaun"
 INVITE_DAYS = "14"

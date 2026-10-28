@@ -52,6 +52,7 @@ export function validateSignup(form, invite) {
 export function validateInvite(form) {
   const v = {
     business_name: clean(form.get("business_name")).slice(0, 120),
+    contact_name: clean(form.get("contact_name")).slice(0, 80),
     contact_email: clean(form.get("contact_email")).slice(0, 120),
     page_slug: clean(form.get("page_slug")).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30),
     quote_number: clean(form.get("quote_number")).slice(0, 30),

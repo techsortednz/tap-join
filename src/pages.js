@@ -68,6 +68,12 @@ button.go[disabled]{opacity:.6}
 .alert.e{background:#fef3f2;color:var(--err);border:1px solid #fecdca}
 .alert.o{background:#ecfdf3;color:var(--ok);border:1px solid #abefc6}
 .big{font-size:56px;line-height:1}
+.busy{position:fixed;inset:0;z-index:50;background:rgba(251,252,254,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;color:var(--navy);font-size:17px}
+.busy[hidden]{display:none}
+.busy span{color:var(--muted);font-size:15px;max-width:22rem}
+.spin{width:40px;height:40px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--navy);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
 .ref{font-family:ui-monospace,Menlo,monospace;font-size:14px;background:var(--tint);padding:2px 8px;border-radius:6px}
 .btn{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:0 20px;border-radius:999px;background:var(--navy);color:#fff;text-decoration:none;font-weight:600;margin-top:16px}
 .btn.alt{background:#fff;color:var(--navy);border:1px solid var(--line)}
@@ -124,7 +130,8 @@ export function joinPage({ invite, terms, version, sitekey, values = {}, errors 
     }
     const wide = f.name === "business_address" ? "wide" : "";
     const e = errors[f.name];
-    const pre = f.name === "accounts_email" && !v(f.name) ? invite.contact_email || "" : v(f.name);
+    const fromInvite = { accounts_email: invite.contact_email, contact_person: invite.contact_name }[f.name];
+    const pre = f.name in values ? v(f.name) : fromInvite || "";
     return `<div class="${wide} ${e ? "bad" : ""}">
 <label class="l" for="${f.name}">${esc(f.label)}${f.required ? "" : ' <span class="opt">(optional)</span>'}</label>
 <input id="${f.name}" name="${f.name}" type="${f.type || "text"}" value="${esc(pre)}" maxlength="${f.max}" ${f.required ? "required" : ""} autocomplete="${auto(f.name)}">
@@ -163,6 +170,7 @@ ${message ? `<div class="alert e" role="alert">${esc(message)}</div>` : ""}
   </div>
   <div class="ts cf-turnstile" data-sitekey="${esc(sitekey)}" data-action="sign" data-size="flexible"></div>
   <button class="go" type="submit" id="go">Sign agreement</button>
+  <div id="busy" class="busy" hidden role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><b>Signing your agreement…</b><span>This takes a few seconds. Please don't refresh or close this page.</span></div>
   <p class="hint" style="text-align:center;margin-top:10px">Typing your name and pressing Sign is your signature. We record the date, time and your IP address with it.</p>
 </div>
 </form>`;
@@ -170,7 +178,7 @@ ${message ? `<div class="alert e" role="alert">${esc(message)}</div>` : ""}
   const script = `
 var n=document.getElementById('signed_name'),p=document.getElementById('sigprev');
 n.addEventListener('input',function(){p.textContent=n.value});
-document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('go');b.disabled=true;b.textContent='Signing…'});
+document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('go');b.disabled=true;b.textContent='Signing…';document.getElementById('busy').hidden=false});
 `;
   return layout({ title: `Sign up – ${invite.business_name}`, body, script, turnstile: true });
 }
@@ -183,7 +191,7 @@ export function signedPage({ invite, agreement, emailOk }) {
   <p class="lead">${esc(agreement.signed_name)} signed the Tap Sign Service Agreement for <b>${esc(invite.business_name)}</b>.</p>
   <p style="margin-top:10px">Reference <span class="ref">${esc(agreement.id)}</span></p>
   <a class="btn" href="/j/${esc(invite.code)}/agreement.pdf">Download your signed copy</a>
-  <p class="hint" style="margin-top:12px">${emailOk ? `A copy has also been emailed to ${esc(agreement.accounts_email)}.` : "Please download your copy now. We'll also send it to you by email."}</p>
+  <p class="hint" style="margin-top:12px">${emailOk ? `A copy has also been emailed to ${esc(agreement.accounts_email)}.` : `A copy is on its way to ${esc(agreement.accounts_email)}. It can take a few minutes to arrive.`}</p>
 </div>
 <div class="card">
   <div class="step"><span>→</span><h2>What happens next</h2></div>
@@ -227,6 +235,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   <form method="post" action="/admin/invites">
     <div class="fields">
       ${inp("business_name", "Business name", 'required maxlength="120"', true)}
+      ${inp("contact_name", "Contact name <span class=\"opt\">(optional)</span>", 'maxlength="80" placeholder="Paul Smith"')}
       ${inp("contact_email", "Customer email <span class=\"opt\">(optional)</span>", 'maxlength="120" inputmode="email"')}
       ${inp("page_slug", "Page slug <span class=\"opt\">(optional)</span>", 'maxlength="30" placeholder="coffeenation"')}
       ${inp("quote_number", "Xero quote no. <span class=\"opt\">(optional)</span>", 'maxlength="30"')}
@@ -253,7 +262,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
   ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div></td>
   <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
-  <td><a href="/admin/agreements/${esc(a.id)}.pdf">PDF</a></td></tr>`).join("")}
+  <td><a href="/admin/agreements/${esc(a.id)}.pdf">PDF</a><form method="post" action="/admin/agreements/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>`).join("")}
   </table></div>` : '<p class="mini">No signed agreements yet.</p>'}
 </div>`;
 
