@@ -149,6 +149,7 @@ ${message ? `<div class="alert e" role="alert">${esc(message)}</div>` : ""}
 <div class="card">
   <div class="step"><span>1</span><h2>Your details</h2></div>
   <div class="fields">${CUSTOMER_FIELDS.map(field).join("")}</div>
+  <label class="check" style="margin-top:16px"><input type="checkbox" name="promo" value="yes" ${values.promo_consent === 0 ? "" : "checked"}> <span><b style="font-weight:600;color:var(--navy)">Promotional Photos:</b> happy for tap by techsorted to feature photos of our Tap Signs, with our business name. No customers or staff will be shown, and you can opt out at any time.</span></label>
 </div>
 
 <div class="card">
@@ -263,7 +264,7 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
 <div class="card">
   <div class="step"><span>${agreements.length}</span><h2>Signed</h2></div>
   ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
-  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Specials & updates approved: ${esc(a.approved_emails)}</div><div class="mini">Forms emailed to: ${esc(a.forms_email)}</div>` : ""}</td>
+  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Specials & updates approved: ${esc(a.approved_emails)}</div><div class="mini">Forms emailed to: ${esc(a.forms_email)}</div><form method="post" action="/agreements/signed/${esc(a.id)}/promo" class="row" style="gap:6px;margin-top:4px">${a.promo_consent ? '<span class="pill ok">Promo photos OK</span>' : '<span class="pill no">No promo photos</span>'}<button class="smallbtn" type="submit" style="height:24px;font-size:12px">${a.promo_consent ? "Mark opted out" : "Mark OK"}</button></form>` : ""}</td>
   <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
   <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form></td></tr>
   <tr id="${esc(a.id)}"><td colspan="3" style="background:var(--tint);border-radius:0 0 10px 10px">${billingBox(a, plan(a), defaultPrice)}</td></tr>`).join("")}

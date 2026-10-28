@@ -14,7 +14,7 @@ const bytes = await stampAgreement({
     signature: await readFile(new URL("assets/Caveat-Medium.ttf", root)),
   },
   fields: {
-    business_name: "Coffee Nation", legal_entity: "Coffee Nation Hamilton Limited", contact_person: "Paul Example",
+    business_name: "Coffee Nation", promo_consent: "Yes, happy for our signs to be featured", contact_person: "Paul Example",
     contact_role: "Owner", phone: "021 123 4567", accounts_email: "accounts@coffeenation.example",
     business_address: "123 Example Street, Hamilton Central, Hamilton 3204", forms_email: "hello@coffeenation.example",
     quote_number: "QU-0042", approved_emails: "paul@coffeenation.example, specials@coffeenation.example", sign_count: "6",

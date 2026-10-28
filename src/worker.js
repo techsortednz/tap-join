@@ -71,6 +71,7 @@ async function route(request, env, ctx) {
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\.pdf$/)) && method === "GET") return adminDownload(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/golive$/)) && method === "POST") return setGoLive(request, env, m[1]);
+    if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/promo$/)) && method === "POST") return togglePromo(env, m[1]);
     return text("Not found", 404);
   }
 
@@ -187,6 +188,7 @@ async function submitJoin(request, env, ctx, code) {
       fonts: { regular: fontRegular, signature: fontSignature },
       fields: {
         ...v,
+        promo_consent: v.promo_consent ? "Yes, happy for our signs to be featured" : "No, please don't feature our signs",
         customer_signatory: check.signedName,
         customer_date: dateText,
         techsorted_signatory: env.COUNTERSIGN_NAME || "Shaun",
@@ -207,13 +209,13 @@ async function submitJoin(request, env, ctx, code) {
       env.DB.prepare(
         `INSERT INTO agreements (id, invite_code, terms_version, business_name, legal_entity, contact_person, contact_role, phone,
           accounts_email, business_address, forms_email, page_slug, quote_number, sign_count, signed_name, signed_at, ip, country,
-          user_agent, countersigned_by, pdf_key, pdf_sha256, go_live, monthly_price, approved_emails)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          user_agent, countersigned_by, pdf_key, pdf_sha256, go_live, monthly_price, approved_emails, promo_consent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         id, code, meta.version, v.business_name, v.legal_entity, v.contact_person, v.contact_role, v.phone,
         v.accounts_email, v.business_address, v.forms_email, v.page_slug, v.quote_number, v.sign_count, check.signedName, nowIso, ip,
         request.cf?.country || "", (request.headers.get("User-Agent") || "").slice(0, 300), env.COUNTERSIGN_NAME || "Shaun", key, sha,
-        invite.go_live || null, invite.monthly_price || env.MONTHLY_PRICE || "39.99", v.approved_emails
+        invite.go_live || null, invite.monthly_price || env.MONTHLY_PRICE || "39.99", v.approved_emails, v.promo_consent
       ),
       env.DB.prepare("UPDATE invites SET agreement_id = ? WHERE code = ?").bind(id, code),
     ]);
@@ -269,6 +271,7 @@ function telegramText(env, a, emailed) {
       .filter(Boolean)
       .join(" · "),
     a.approved_emails ? `Specials & updates approved emails: ${a.approved_emails} (add with /addsender)` : "",
+    a.promo_consent ? "📸 Happy for their signs to be featured" : "📸 No promo photos",
     a.go_live ? planLine(a) : "",
     emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
     "Next: send the setup and signs invoice.",
@@ -395,6 +398,12 @@ async function setGoLive(request, env, id) {
     .bind(goLive || null, price, id)
     .run();
   return redirect(`/agreements?golive=1#${id}`);
+}
+
+async function togglePromo(env, id) {
+  if (!ID_RE.test(id)) return text("Not found", 404);
+  await env.DB.prepare("UPDATE agreements SET promo_consent = 1 - promo_consent WHERE id = ?").bind(id).run();
+  return redirect(`/agreements#${id}`);
 }
 
 async function resendCopy(env, id) {

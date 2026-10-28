@@ -5,21 +5,20 @@ const SLUG = /^[a-z0-9]{2,30}$/;
 
 // Fields the customer fills in. `locked` ones come from the invite and are shown read-only.
 export const CUSTOMER_FIELDS = [
-  { name: "business_name", label: "Business name", required: true, max: 120, locked: true },
-  { name: "legal_entity", label: "Legal entity / NZBN", max: 120, hint: "e.g. Your Business Ltd, or your NZBN" },
-  { name: "contact_person", label: "Contact person", required: true, max: 80 },
+  { name: "business_name", label: "Business Name", required: true, max: 120, locked: true },
+  { name: "contact_person", label: "Contact Person", required: true, max: 80 },
   { name: "contact_role", label: "Role", max: 60, hint: "e.g. Owner" },
   { name: "phone", label: "Phone", required: true, max: 30, type: "tel", pattern: /^[0-9+()\s-]{6,30}$/ },
-  { name: "accounts_email", label: "Accounts email", required: true, max: 120, type: "email", email: true, hint: "Invoices and your signed copy go here" },
-  { name: "business_address", label: "Business address", required: true, max: 200 },
-  { name: "forms_email", label: "Feedback & catering forms emailed to", max: 120, type: "email", email: true, hint: "Your page's Feedback and Catering forms send to this address. Leave blank to use your accounts email" },
-  { name: "approved_email_1", label: "Specials & updates approved email", required: true, max: 120, type: "email", email: true, group: "approved",
+  { name: "accounts_email", label: "Accounts Email", required: true, max: 120, type: "email", email: true, hint: "Invoices and your signed copy go here" },
+  { name: "business_address", label: "Business Address", required: true, max: 200 },
+  { name: "forms_email", label: "Feedback & Catering Forms Emailed To", max: 120, type: "email", email: true, hint: "Your page's Feedback and Catering forms send to this address. Leave blank to use your accounts email" },
+  { name: "approved_email_1", label: "Specials & Updates Approved Email", required: true, max: 120, type: "email", email: true, group: "approved",
     hint: "Only approved addresses can send us specials, menu and page changes" },
-  { name: "approved_email_2", label: "Second approved email", max: 120, type: "email", email: true, group: "approved" },
-  { name: "approved_email_3", label: "Third approved email", max: 120, type: "email", email: true, group: "approved",
+  { name: "approved_email_2", label: "Second Approved Email", max: 120, type: "email", email: true, group: "approved" },
+  { name: "approved_email_3", label: "Third Approved Email", max: 120, type: "email", email: true, group: "approved",
     hint: "You can add more later by asking us" },
-  { name: "quote_number", label: "Xero quote no.", max: 30, locked: true },
-  { name: "sign_count", label: "Number of signs", max: 10, locked: true },
+  { name: "quote_number", label: "Xero Quote No.", max: 30, locked: true },
+  { name: "sign_count", label: "Number of Signs", max: 10, locked: true },
 ];
 
 const clean = (v) =>
@@ -48,6 +47,8 @@ export function validateSignup(form, invite) {
 
   const signedName = clean(form.get("signed_name")).slice(0, 80);
   if (signedName.length < 3 || !/\s/.test(signedName)) errors.signed_name = "Type your full name (first and last)";
+  values.legal_entity = "";
+  values.promo_consent = form.get("promo") === "yes" ? 1 : 0;
   if (form.get("agree") !== "yes") errors.agree = "Tick to confirm you agree";
   if (form.get("authority") !== "yes") errors.authority = "Tick to confirm you can sign for the business";
 

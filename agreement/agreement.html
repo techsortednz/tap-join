@@ -59,7 +59,7 @@ ol li::before{counter-increment:t;content:counter(t);background:none;width:auto;
 .party .who{font-size:7.6pt;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.7pt;margin-bottom:1mm}
 .party .f{width:100%}
 .f.sig input{height:7.5mm}
-.f.long label{width:46mm}
+.f.long label{width:55mm;white-space:nowrap}
 .record{margin-top:1.6mm}
 .record input{width:100%;height:3.6mm;border:0;background:transparent}
 .foot{margin-top:2.4mm;font-size:6.9pt;color:var(--muted);text-align:center}
@@ -91,17 +91,17 @@ ol li::before{counter-increment:t;content:counter(t);background:none;width:auto;
 <div class="cust">
   <h2>Customer details</h2>
   <div class="grid">
-    <div class="f"><label>Business name</label><input name="business_name"></div>
-    <div class="f"><label>Xero quote no.</label><input name="quote_number"></div>
-    <div class="f"><label>Legal entity / NZBN</label><input name="legal_entity"></div>
-    <div class="f"><label>Number of signs</label><input name="sign_count"></div>
-    <div class="f"><label>Contact person</label><input name="contact_person"></div>
+    <div class="f"><label>Business Name</label><input name="business_name"></div>
+    <div class="f"><label>Xero Quote No.</label><input name="quote_number"></div>
+    <div class="f"><label>Contact Person</label><input name="contact_person"></div>
     <div class="f"><label>Role</label><input name="contact_role"></div>
     <div class="f"><label>Phone</label><input name="phone"></div>
-    <div class="f"><label>Accounts email</label><input name="accounts_email"></div>
-    <div class="f full"><label>Business address</label><input name="business_address"></div>
-    <div class="f full long"><label>Feedback &amp; catering forms emailed to</label><input name="forms_email"></div>
-    <div class="f full long"><label>Specials &amp; updates approved emails</label><input name="approved_emails"></div>
+    <div class="f"><label>Accounts Email</label><input name="accounts_email"></div>
+    <div class="f"><label>Business Address</label><input name="business_address"></div>
+    <div class="f"><label>Number of Signs</label><input name="sign_count"></div>
+    <div class="f full long"><label>Feedback &amp; Catering Forms Emailed To</label><input name="forms_email"></div>
+    <div class="f full long"><label>Specials &amp; Updates Approved Emails</label><input name="approved_emails"></div>
+    <div class="f full long"><label>Promotional Photos</label><input name="promo_consent"></div>
   </div>
 </div>
 

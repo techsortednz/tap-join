@@ -12,6 +12,8 @@ const good = {
 let r = validateSignup(fd(good), invite);
 assert.ok(r.ok, JSON.stringify(r.errors));
 assert.equal(r.values.forms_email, "a@b.co", "forms email falls back to accounts email");
+assert.equal(r.values.promo_consent, 0, "promo only when ticked");
+assert.equal(validateSignup(fd({ ...good, promo: "yes" }), invite).values.promo_consent, 1);
 assert.equal(r.values.approved_emails, "a@b.co, c@d.co", "approved emails are lower-cased and de-duplicated");
 
 r = validateSignup(fd({ ...good, business_name: "Hacked", sign_count: "999" }), invite);
