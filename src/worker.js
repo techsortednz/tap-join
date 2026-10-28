@@ -234,7 +234,7 @@ async function submitJoin(request, env, ctx, code) {
     (async () => {
       const agreement = await env.DB.prepare("SELECT * FROM agreements WHERE id = ?").bind(id).first();
       const mail = await deliverCopy(env, agreement, invite, bytes);
-      await sendTelegram(env, telegramText(env, agreement, mail.ok));
+      await sendTelegram(env, telegramText(env, agreement, mail.ok), { html: true });
     })()
   );
 
@@ -263,19 +263,30 @@ function planLine(a) {
   return `Planned go-live ${nzDate(new Date(a.go_live + "T00:00:00"))}: free to ${p.text.freeUntil}, first invoice ${p.text.invoiceDate} $${p.firstInvoice.total.toFixed(2)} + GST`;
 }
 
+// Telegram message (HTML mode): plain lines are escaped; /addsender commands are in <code> so one tap copies them.
 function telegramText(env, a, emailed) {
+  const e = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const emails = (a.approved_emails || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const slug = a.page_slug || "SLUG";
+  const senders = emails.length
+    ? [
+        `Specials &amp; updates approved emails (tap to copy, then send):`,
+        ...emails.map((m) => `<code>/addsender ${e(m)} ${e(slug)} ${e(a.business_name)}</code>`),
+        a.page_slug ? "" : "(replace SLUG with their page slug)",
+      ]
+    : [];
   return [
-    `✍️ ${a.business_name} signed the Tap Sign agreement`,
-    `Ref ${a.id} (v${a.terms_version})`,
-    `Signed by ${a.signed_name}${a.contact_role ? ` (${a.contact_role})` : ""}`,
-    [a.quote_number && `Quote ${a.quote_number}`, a.sign_count && `${a.sign_count} signs`, a.page_slug && `tap.techsorted.nz/${a.page_slug}`]
+    `✍️ <b>${e(a.business_name)}</b> signed the Tap Sign agreement`,
+    `Ref ${e(a.id)} (v${e(a.terms_version)})`,
+    `Signed by ${e(a.signed_name)}${a.contact_role ? ` (${e(a.contact_role)})` : ""}`,
+    [a.quote_number && `Quote ${e(a.quote_number)}`, a.sign_count && `${e(a.sign_count)} signs`, a.page_slug && `tap.techsorted.nz/${e(a.page_slug)}`]
       .filter(Boolean)
       .join(" · "),
-    a.approved_emails ? `Specials & updates approved emails: ${a.approved_emails} (add with /addsender)` : "",
-    `Feedback form → ${a.forms_email} · Catering form → ${a.catering_email || a.forms_email}`,
+    ...senders,
+    `Feedback form → ${e(a.forms_email)} · Catering form → ${e(a.catering_email || a.forms_email)}`,
     a.promo_consent ? "📸 Happy for their signs to be featured" : "📸 No promo photos",
-    a.go_live ? planLine(a) : "",
-    emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
+    a.go_live ? e(planLine(a)) : "",
+    emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Send copy on the Agreements page.",
     "Next: send the setup and signs invoice.",
     `https://${env.HUB_HOST}/agreements`,
   ]

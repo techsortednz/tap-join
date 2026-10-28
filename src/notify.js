@@ -44,7 +44,7 @@ export async function sendEmail(env, { to, bcc = [], subject, text, html, attach
   }
 }
 
-export async function sendTelegram(env, text) {
+export async function sendTelegram(env, text, { html = false } = {}) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
     console.log(`[telegram skipped] ${text}`);
     return { ok: false, skipped: true };
@@ -53,7 +53,7 @@ export async function sendTelegram(env, text) {
     const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }),
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true, ...(html ? { parse_mode: "HTML" } : {}) }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) console.log(`[telegram failed] ${res.status}`);
