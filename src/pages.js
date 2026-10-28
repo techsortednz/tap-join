@@ -88,6 +88,24 @@ th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;le
 .pill.ok{background:#ecfdf3;color:var(--ok)}
 .pill.no{background:#fef3f2;color:var(--err)}
 .linkbox{display:flex;gap:8px;margin-top:8px}
+.search{margin-top:20px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.search input{width:100%;height:46px;border:1px solid #b9c0cf;border-radius:999px;padding:0 18px;font:inherit;background:#fff}
+details.agr{border:1px solid var(--line);border-radius:12px;margin-top:10px;background:#fff}
+details.agr[open]{border-color:#b9c0cf}
+details.agr summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
+details.agr summary::-webkit-details-marker{display:none}
+details.agr summary::before{content:"▸";color:var(--muted);margin-right:-4px;transition:transform .15s}
+details.agr[open] summary::before{transform:rotate(90deg)}
+.agr-main{display:flex;flex-direction:column;flex:1;min-width:12rem}
+.agr-main b{color:var(--navy)}
+.agr-pills{display:flex;flex-wrap:wrap;gap:4px}
+.agr-body{padding:0 14px 14px;border-top:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:8.5rem 1fr;gap:6px 10px;margin-top:12px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{overflow-wrap:anywhere}
+@media(max-width:480px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
+.billing{background:var(--tint);border-radius:10px;padding:12px}
+.linkbtn{display:inline-flex;align-items:center;text-decoration:none;color:var(--navy)}
 .linkbox input{flex:1;font-size:14px}
 .linkbox button,.smallbtn{height:46px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:#fff;font:inherit;cursor:pointer}
 .smallbtn{height:32px;font-size:13px;padding:0 10px}
@@ -258,10 +276,14 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   </form>
 </div>
 
+<div class="search">
+  <input type="search" id="q" placeholder="Search name, contact, email, phone or ref" aria-label="Search agreements" autocomplete="off">
+</div>
+
 <div class="card">
   <div class="step"><span>${pending.length}</span><h2>Waiting to be signed</h2></div>
   ${pending.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Link</th><th>Status</th><th></th></tr>
-  ${pending.map((i) => `<tr><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}${i.go_live ? `<div class="mini">Planned go-live ${esc(dateNice(i.go_live))} · $${esc(i.monthly_price || defaultPrice)}/mo</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
+  ${pending.map((i) => `<tr data-q="${esc([i.business_name, i.contact_name, i.contact_email, i.page_slug, i.quote_number, i.note].filter(Boolean).join(" ").toLowerCase())}"><td><b>${esc(i.business_name)}</b><div class="mini">${esc([i.quote_number, i.sign_count ? `${i.sign_count} signs` : "", i.page_slug].filter(Boolean).join(" · "))}</div>${i.note ? `<div class="mini">${esc(i.note)}</div>` : ""}${i.go_live ? `<div class="mini">Planned go-live ${esc(dateNice(i.go_live))} · $${esc(i.monthly_price || defaultPrice)}/mo</div>` : ""}<div class="mini">Made ${esc(fmt(i.created_at))} · expires ${esc(fmt(i.expires_at))}</div></td>
   <td><input type="text" readonly value="${esc(link(i.code))}" id="l-${esc(i.code)}" style="height:32px;font-size:12px;min-width:12rem"><button type="button" class="smallbtn" data-copy="l-${esc(i.code)}">Copy</button></td>
   <td>${state(i)}</td>
   <td>${i.revoked_at || i.expires_at < new Date().toISOString() ? "" : `${i.contact_email ? `<form method="post" action="/agreements/invites/${esc(i.code)}/email"><button class="smallbtn" type="submit">${i.emailed_at ? "Resend link" : "Send link"}</button></form><div class="mini" style="margin:2px 0 6px">${i.emailed_at ? `Emailed ${esc(fmt(i.emailed_at))}` : "Not emailed yet"}</div>` : '<div class="mini" style="margin-bottom:6px">No email: copy the link</div>'}<form method="post" action="/agreements/invites/${esc(i.code)}/revoke" onsubmit="return confirm('Cancel this link?')"><button class="smallbtn" type="submit">Cancel</button></form>`}</td></tr>`).join("")}
@@ -270,15 +292,29 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
 
 <div class="card">
   <div class="step"><span>${agreements.length}</span><h2>Signed</h2></div>
-  ${agreements.length ? `<div class="tablewrap"><table><tr><th>Business</th><th>Signed</th><th>PDF</th></tr>
-  ${agreements.map((a) => `<tr><td><b>${esc(a.business_name)}</b><div class="mini">${esc(a.id)} · v${esc(a.terms_version)}</div><div class="mini">${esc(a.contact_person)} · ${esc(a.accounts_email)}</div>${a.approved_emails ? `<div class="mini">Specials & updates approved: ${esc(a.approved_emails)}</div><div class="mini">Feedback form → ${esc(a.forms_email)} · Catering form → ${esc(a.catering_email || a.forms_email)}</div><form method="post" action="/agreements/signed/${esc(a.id)}/promo" class="row" style="gap:6px;margin-top:4px">${a.promo_consent ? '<span class="pill ok">Promo photos OK</span>' : '<span class="pill no">No promo photos</span>'}<button class="smallbtn" type="submit" style="height:24px;font-size:12px">${a.promo_consent ? "Mark opted out" : "Mark OK"}</button></form>` : ""}</td>
-  <td>${esc(a.signed_name)}<div class="mini">${esc(fmt(a.signed_at))}</div>${a.email_sent ? "" : '<div class="mini" style="color:var(--err)">Copy not emailed</div>'}</td>
-  <td><a href="/agreements/signed/${esc(a.id)}.pdf">PDF</a><form method="post" action="/agreements/signed/${esc(a.id)}/resend" style="margin-top:6px"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form>${a.drive_url ? `<div class="mini" style="margin-top:6px">${/^https:\/\/drive\.google\.com\//.test(a.drive_url) ? `<a href="${esc(a.drive_url)}" target="_blank" rel="noopener">In Drive ✓</a>` : "In Drive ✓"}</div>` : `<form method="post" action="/agreements/signed/${esc(a.id)}/drive" style="margin-top:6px"><button class="smallbtn" type="submit">Save to Drive</button></form>`}</td></tr>
-  <tr id="${esc(a.id)}"><td colspan="3" style="background:var(--tint);border-radius:0 0 10px 10px">${billingBox(a, plan(a), defaultPrice)}</td></tr>`).join("")}
-  </table></div>` : '<p class="mini">No signed agreements yet.</p>'}
+  ${agreements.length ? agreements.map((a) => signedCard(a, plan(a), defaultPrice, fmt)).join("") : '<p class="mini">No signed agreements yet.</p>'}
+  <p class="mini" id="nomatch" hidden>No agreements match.</p>
 </div>`;
 
-  const script = `document.addEventListener('click',function(e){var b=e.target.closest('[data-copy]');if(!b)return;var i=document.getElementById(b.dataset.copy);try{navigator.clipboard.writeText(i.value)}catch(_){i.hidden=false;i.select();document.execCommand('copy');i.hidden=true}b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});`;
+  const script = `
+(function(){
+  var q=document.getElementById('q'),none=document.getElementById('nomatch');
+  function run(){
+    var t=q.value.trim().toLowerCase(),shown=0;
+    document.querySelectorAll('[data-q]').forEach(function(el){
+      var hit=!t||t.split(/\\s+/).every(function(w){return el.dataset.q.indexOf(w)>-1});
+      el.hidden=!hit;
+      if(el.tagName==='DETAILS'&&hit)shown++;
+    });
+    var vis=document.querySelectorAll('details[data-q]:not([hidden])');
+    if(t&&vis.length===1)vis[0].open=true;
+    if(none)none.hidden=!(t&&shown===0&&document.querySelector('details[data-q]'));
+  }
+  q.addEventListener('input',run);
+  var h=decodeURIComponent(location.hash.slice(1));
+  if(h){var d=document.getElementById(h);if(d&&d.tagName==='DETAILS'){d.open=true;d.scrollIntoView({block:'start'});}}
+})();
+document.addEventListener('click',function(e){var b=e.target.closest('[data-copy]');if(!b)return;var i=document.getElementById(b.dataset.copy);try{navigator.clipboard.writeText(i.value)}catch(_){i.hidden=false;i.select();document.execCommand('copy');i.hidden=true}b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)});`;
   return layout({ title: "Agreements – tap by techsorted", body, script, admin: true });
 }
 
@@ -319,6 +355,50 @@ ${card("/agreements", "Agreements", "Make sign-up links and see signed agreement
 .hubcard p{color:var(--muted);font-size:15px;margin-bottom:6px}
 .go2{display:inline-block;margin-top:8px;font-weight:600;color:var(--blue)}</style>`
   );
+}
+
+function signedCard(a, p, defaultPrice, fmt) {
+  const q = [a.business_name, a.contact_person, a.signed_name, a.accounts_email, a.approved_emails, a.forms_email, a.catering_email, a.phone, a.id, a.page_slug, a.quote_number]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const pills = [
+    a.email_sent ? "" : '<span class="pill no">Copy not emailed</span>',
+    a.drive_url ? '<span class="pill ok">Drive ✓</span>' : '<span class="pill no">Not in Drive</span>',
+    a.go_live ? `<span class="pill">Go-live ${esc(dateNice(a.go_live))}</span>` : '<span class="pill">Go-live not set</span>',
+  ].join(" ");
+  const driveLink = a.drive_url
+    ? /^https:\/\/drive\.google\.com\//.test(a.drive_url)
+      ? `<a class="smallbtn linkbtn" href="${esc(a.drive_url)}" target="_blank" rel="noopener">Open in Drive</a>`
+      : ""
+    : `<form method="post" action="/agreements/signed/${esc(a.id)}/drive"><button class="smallbtn" type="submit">Save to Drive</button></form>`;
+  return `<details class="agr" id="${esc(a.id)}" data-q="${esc(q)}">
+<summary>
+  <span class="agr-main"><b>${esc(a.business_name)}</b><span class="mini">${esc(a.contact_person)} · signed ${esc(fmt(a.signed_at))}</span></span>
+  <span class="agr-pills">${pills}</span>
+</summary>
+<div class="agr-body">
+  <dl class="kv">
+    <dt>Ref</dt><dd>${esc(a.id)} · agreement v${esc(a.terms_version)}</dd>
+    <dt>Signed by</dt><dd>${esc(a.signed_name)}${a.contact_role ? ` (${esc(a.contact_role)})` : ""}</dd>
+    <dt>Phone</dt><dd>${esc(a.phone)}</dd>
+    <dt>Accounts email</dt><dd>${esc(a.accounts_email)}</dd>
+    <dt>Address</dt><dd>${esc(a.business_address)}</dd>
+    ${a.quote_number || a.sign_count ? `<dt>Quote / signs</dt><dd>${esc([a.quote_number, a.sign_count ? `${a.sign_count} signs` : ""].filter(Boolean).join(" · "))}</dd>` : ""}
+    ${a.page_slug ? `<dt>Page</dt><dd>tap.techsorted.nz/${esc(a.page_slug)}</dd>` : ""}
+    <dt>Feedback form</dt><dd>${esc(a.forms_email)}</dd>
+    <dt>Catering form</dt><dd>${esc(a.catering_email || a.forms_email)}</dd>
+    <dt>Approved emails</dt><dd>${esc(a.approved_emails || "–")}</dd>
+    <dt>Promo photos</dt><dd><form method="post" action="/agreements/signed/${esc(a.id)}/promo" class="row" style="gap:6px">${a.promo_consent ? '<span class="pill ok">OK</span>' : '<span class="pill no">No</span>'}<button class="smallbtn" type="submit" style="height:26px;font-size:12px">${a.promo_consent ? "Mark opted out" : "Mark OK"}</button></form></dd>
+  </dl>
+  <div class="row" style="gap:8px;margin:12px 0">
+    <a class="smallbtn linkbtn" href="/agreements/signed/${esc(a.id)}.pdf" target="_blank" rel="noopener">View PDF</a>
+    <form method="post" action="/agreements/signed/${esc(a.id)}/resend"><button class="smallbtn" type="submit">${a.email_sent ? "Resend copy" : "Send copy"}</button></form>
+    ${driveLink}
+  </div>
+  <div class="billing">${billingBox(a, p, defaultPrice)}</div>
+</div>
+</details>`;
 }
 
 function dateNice(isoDate) {
