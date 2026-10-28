@@ -268,7 +268,7 @@ function telegramText(env, a, emailed) {
     [a.quote_number && `Quote ${a.quote_number}`, a.sign_count && `${a.sign_count} signs`, a.page_slug && `tap.techsorted.nz/${a.page_slug}`]
       .filter(Boolean)
       .join(" · "),
-    a.approved_emails ? `Approved for updates: ${a.approved_emails} (add with /addsender)` : "",
+    a.approved_emails ? `Specials & updates approved emails: ${a.approved_emails} (add with /addsender)` : "",
     a.go_live ? planLine(a) : "",
     emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Resend copy on the admin page.",
     "Next: send the setup and signs invoice.",
