@@ -83,6 +83,30 @@ export async function verifyTurnstile(env, token, ip) {
   }
 }
 
+// Sends the signed PDF to the "Tap agreements backup" Apps Script, which saves it in Google Drive.
+export async function saveToDrive(env, { filename, year, bytes, description }) {
+  if (!env.DRIVE_BACKUP_URL || !env.DRIVE_BACKUP_SECRET) {
+    console.log(`[drive skipped: not set up] ${filename}`);
+    return { ok: false, skipped: true };
+  }
+  const started = Date.now();
+  try {
+    const res = await fetch(env.DRIVE_BACKUP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: env.DRIVE_BACKUP_SECRET, filename, year, description, pdf: toBase64(bytes) }),
+      redirect: "follow",
+      signal: AbortSignal.timeout(25000),
+    });
+    const data = await res.json().catch(() => ({}));
+    console.log(`[drive ${data.ok ? "saved" : "failed"}] ${Date.now() - started}ms status=${res.status} ${JSON.stringify(data).slice(0, 200)}`);
+    return data.ok ? { ok: true, url: data.url } : { ok: false };
+  } catch (e) {
+    console.log(`[drive error] ${Date.now() - started}ms ${e?.name}: ${e?.message}`);
+    return { ok: false };
+  }
+}
+
 function toBase64(bytes) {
   let s = "";
   const chunk = 0x8000;

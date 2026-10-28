@@ -87,3 +87,7 @@ Then open http://localhost:8787/hub or http://localhost:8787/agreements (`npm ru
 - The first invoice is the first 10th after go-live and only charges days after the free 30 days, at a daily rate (`src/billing.js`, tests in `test/billing.test.mjs`).
 - Put a **planned go-live** date and **monthly price** on the link (allow for printing). After signing, each agreement on the hub shows the free-until date, the first invoice lines and total (Copy lines, for a Xero draft) and when to start the repeating invoice. Change the go-live date there when the signs actually go out.
 - The customer lists up to three **approved emails for updates**; Telegram shows them so they can be added to the specials sender list with `/addsender`.
+
+## Google Drive backup
+
+Every signed PDF is also saved to Google Drive in **Tap by techsorted / Signed Agreements / <year>/**. The file is named `2026-10-28 Cafe Name – TAP-....pdf`, and its description holds the PDF's SHA-256. A small separate Apps Script web app does the saving (`tools/drive-backup/Code.gs`, project "Tap agreements backup"); it's kept apart from the Tap Email script on purpose. Worker secrets: `DRIVE_BACKUP_URL` (the web app's /exec URL) and `DRIVE_BACKUP_SECRET` (same as the script's `BACKUP_SECRET`). The Agreements page shows **In Drive ✓** or a **Save to Drive** button to retry, and Telegram says if a backup failed.

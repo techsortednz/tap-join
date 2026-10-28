@@ -40,7 +40,8 @@ type = "Data"
 globs = ["**/*.pdf", "**/*.ttf"]
 fallthrough = true
 
-# Not secret. Secrets (TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+# Not secret. Secrets (TURNSTILE_SECRET, SMTP2GO_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+# DRIVE_BACKUP_URL, DRIVE_BACKUP_SECRET)
 # are set in the Worker's settings in the Cloudflare dashboard, never in this file.
 [vars]
 PUBLIC_ORIGIN = "https://jointap.techsorted.nz"

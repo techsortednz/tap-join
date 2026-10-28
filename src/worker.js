@@ -26,7 +26,7 @@ import terms from "../agreement/terms.html";
 
 import { verifyAccessJwt } from "./access.js";
 import { stampAgreement } from "./pdf.js";
-import { sendEmail, sendTelegram, verifyTurnstile } from "./notify.js";
+import { sendEmail, sendTelegram, verifyTurnstile, saveToDrive } from "./notify.js";
 import { validateSignup, validateInvite, isDate } from "./validate.js";
 import { billingPlan } from "./billing.js";
 import { joinPage, signedPage, statusPage, adminPage, hubPage } from "./pages.js";
@@ -72,6 +72,7 @@ async function route(request, env, ctx) {
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/resend$/)) && method === "POST") return resendCopy(env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/golive$/)) && method === "POST") return setGoLive(request, env, m[1]);
     if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/promo$/)) && method === "POST") return togglePromo(env, m[1]);
+    if ((m = path.match(/^\/agreements\/signed\/([^/]+)\/drive$/)) && method === "POST") return retryDrive(env, m[1]);
     return text("Not found", 404);
   }
 
@@ -233,12 +234,28 @@ async function submitJoin(request, env, ctx, code) {
   ctx.waitUntil(
     (async () => {
       const agreement = await env.DB.prepare("SELECT * FROM agreements WHERE id = ?").bind(id).first();
-      const mail = await deliverCopy(env, agreement, invite, bytes);
-      await sendTelegram(env, telegramText(env, agreement, mail.ok), { html: true });
+      const [mail, drive] = await Promise.all([deliverCopy(env, agreement, invite, bytes), backupToDrive(env, agreement, bytes)]);
+      await sendTelegram(env, telegramText(env, agreement, mail.ok, drive), { html: true });
     })()
   );
 
   return redirect(`/j/${code}`);
+}
+
+async function backupToDrive(env, a, bytes) {
+  if (!bytes) {
+    const obj = await env.AGREEMENTS.get(a.pdf_key);
+    if (!obj) return { ok: false };
+    bytes = new Uint8Array(await obj.arrayBuffer());
+  }
+  const res = await saveToDrive(env, {
+    filename: `${a.signed_at.slice(0, 10)} ${a.business_name} – ${a.id}.pdf`,
+    year: a.signed_at.slice(0, 4),
+    bytes,
+    description: `Tap Sign Service Agreement v${a.terms_version}, signed by ${a.signed_name}. SHA-256 ${a.pdf_sha256}`,
+  });
+  if (res.ok) await env.DB.prepare("UPDATE agreements SET drive_url = ? WHERE id = ?").bind(res.url || "saved", a.id).run();
+  return res;
 }
 
 async function deliverCopy(env, a, invite, bytes) {
@@ -264,7 +281,7 @@ function planLine(a) {
 }
 
 // Telegram message (HTML mode): plain lines are escaped; /addsender commands are in <code> so one tap copies them.
-function telegramText(env, a, emailed) {
+function telegramText(env, a, emailed, drive = {}) {
   const e = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const emails = (a.approved_emails || "").split(",").map((x) => x.trim()).filter(Boolean);
   const slug = a.page_slug || "SLUG";
@@ -287,6 +304,7 @@ function telegramText(env, a, emailed) {
     a.promo_consent ? "📸 Happy for their signs to be featured" : "📸 No promo photos",
     a.go_live ? e(planLine(a)) : "",
     emailed ? "Signed copy emailed to them." : "⚠️ The email copy didn't send. Use Send copy on the Agreements page.",
+    drive.ok ? "Backed up to Google Drive." : drive.skipped ? "" : "⚠️ Google Drive backup failed. Use Save to Drive on the Agreements page.",
     "Next: send the setup and signs invoice.",
     `https://${env.HUB_HOST}/agreements`,
   ]
@@ -332,6 +350,8 @@ async function showAdmin(env, url, extra = {}) {
       ? { title: "Link cancelled." }
       : url.searchParams.get("linksent")
         ? { title: url.searchParams.get("linksent") === "1" ? "Link emailed to the customer." : "The link email didn't send. Copy the link and send it yourself." }
+      : url.searchParams.get("drive")
+        ? { title: url.searchParams.get("drive") === "1" ? "Saved to Google Drive." : "Couldn't save to Google Drive. Check the backup script and try again." }
       : url.searchParams.get("golive")
         ? { title: url.searchParams.get("golive") === "1" ? "Go-live date saved." : "Check the date and price, then try again." }
       : url.searchParams.get("resent")
@@ -411,6 +431,14 @@ async function setGoLive(request, env, id) {
     .bind(goLive || null, price, id)
     .run();
   return redirect(`/agreements?golive=1#${id}`);
+}
+
+async function retryDrive(env, id) {
+  if (!ID_RE.test(id)) return text("Not found", 404);
+  const a = await env.DB.prepare("SELECT * FROM agreements WHERE id = ?").bind(id).first();
+  if (!a) return text("Not found", 404);
+  const res = await backupToDrive(env, a, null);
+  return redirect(`/agreements?drive=${res.ok ? "1" : "0"}#${id}`);
 }
 
 async function togglePromo(env, id) {
