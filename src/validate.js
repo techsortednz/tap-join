@@ -6,7 +6,7 @@ const SLUG = /^[a-z0-9]{2,30}$/;
 // Fields the customer fills in. `locked` ones come from the invite and are shown read-only.
 export const CUSTOMER_FIELDS = [
   { name: "business_name", label: "Business name", required: true, max: 120, locked: true },
-  { name: "legal_entity", label: "Legal entity / NZBN", max: 120, hint: "e.g. Coffee Nation Ltd, or your NZBN" },
+  { name: "legal_entity", label: "Legal entity / NZBN", max: 120, hint: "e.g. Your Business Ltd, or your NZBN" },
   { name: "contact_person", label: "Contact person", required: true, max: 80 },
   { name: "contact_role", label: "Role", max: 60, hint: "e.g. Owner" },
   { name: "phone", label: "Phone", required: true, max: 30, type: "tel", pattern: /^[0-9+()\s-]{6,30}$/ },

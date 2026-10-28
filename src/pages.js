@@ -236,9 +236,9 @@ ${flash ? `<div class="alert o" role="status"><b>${esc(flash.title)}</b>${flash.
   <form method="post" action="/agreements/invites">
     <div class="fields">
       ${inp("business_name", "Business name", 'required maxlength="120"', true)}
-      ${inp("contact_name", "Contact name <span class=\"opt\">(optional)</span>", 'maxlength="80" placeholder="Paul Smith"')}
+      ${inp("contact_name", "Contact name <span class=\"opt\">(optional)</span>", 'maxlength="80" placeholder="First and last name"')}
       ${inp("contact_email", "Customer email <span class=\"opt\">(link is emailed here)</span>", 'maxlength="120" inputmode="email"')}
-      ${inp("page_slug", "Page slug <span class=\"opt\">(optional)</span>", 'maxlength="30" placeholder="coffeenation"')}
+      ${inp("page_slug", "Page slug <span class=\"opt\">(optional)</span>", 'maxlength="30" placeholder="yourbusiness"')}
       ${inp("quote_number", "Xero quote no. <span class=\"opt\">(optional)</span>", 'maxlength="30"')}
       ${inp("sign_count", "Number of signs <span class=\"opt\">(optional)</span>", 'maxlength="4" inputmode="numeric"')}
       ${inp("note", "Private note <span class=\"opt\">(optional)</span>", 'maxlength="300"', true)}
